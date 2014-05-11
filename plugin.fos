@@ -1,0 +1,1403 @@
+#ifndef __PLUGIN__
+#define __PLUGIN__
+
+// NOTE: "plugin" module must be loaded before any other modules using it
+
+#include "plugin_h.fos"
+
+#ifndef valid
+	#define valid #(obj)	(@obj!=null)
+#endif
+#ifndef invalid
+	#define invalid #(obj)	(@obj==null)
+#endif
+
+#pragma globalvar "uint __PluginSorting = PLUGIN_PRIORITY_END"
+
+array<Plugin@> Plugins;
+
+shared class Plugin
+{
+	// Name of the plugin
+	string Name = "";
+
+	// Short description of the plugin
+	string Description = "";
+
+	// If false, copies of engine reserved functions won't be executed
+	bool Enabled = false;
+
+	private array<string> RequiredPlugins = {};
+	private array<string> OptionalPlugins = {};
+
+	PluginPriority Priority = PluginPriority();
+
+	// default constructor
+	Plugin( string& name )
+	{
+		this.Name = name;
+	}
+
+/*
+	int opCmp( Plugin& other )
+	{
+		if( __PluginSorting <= uint(PLUGIN_PRIORITY_BEGIN) || __PluginSorting >= uint(PLUGIN_PRIORITY_END) )
+		{
+			Log( "ERROR: invalid __PluginSorting value<"+__PluginSorting+"> when comparing plugin<"+this.Name+"> vs plugin<"+other.Name+">"  );
+			return( 0 );
+		}
+
+		PluginPriorityName name = PluginPriorityName(__PluginSorting);
+
+		uint16 thisPriority = this.Priority[name];
+		uint16 otherPriority = other.Priority[name];
+
+		if( thisPriority < otherPriority )
+			return( -1 );
+		else if( thisPriority > otherPriority )
+			return( 1 );
+		else
+			return( 0 );
+	}
+*/
+
+	// Saves another plugin name as a requirement, to be checked during registration
+	// If 'required' is set to true, plugin won't be possible to register if specified
+	// plugin is missing. Otherwise, only warning will be displayed.
+	Plugin@ Require( string& name, bool required = true ) final
+	{
+		if( name.length() == 0 )
+		{
+			Log( "ERROR: empty requirement by plugin<"+this.Name+">" );
+			return( this );
+		}
+		else if( name == "*" )
+		{
+			Log( "ERROR: invalid requirement<*> by plugin<"+this.Name+">" );
+			return( this );
+		}
+		else if( this.Name == name )
+		{
+			Log( "ERROR: self requirement by plugin<"+this.Name+">" );
+			return( this );
+		}
+
+		if( required )
+		{
+			if( this.RequiredPlugins.find( name ) < 0 )
+				this.RequiredPlugins.insertLast( name );
+
+			int idx = this.OptionalPlugins.find( name );
+			if( idx >= 0 )
+			{
+				Log( "WARNING: plugin<"+this.Name+"> : requirement<"+name+"> changed from 'optional' to 'required'" );
+				this.OptionalPlugins.removeAt( idx );
+			}
+		}
+		else
+		{
+			if( this.OptionalPlugins.find( name ) < 0 )
+				this.OptionalPlugins.insertLast( name );
+
+			int idx = this.RequiredPlugins.find( name );
+			if( idx >= 0 )
+			{
+				Log( "WARNING: plugin<"+this.Name+"> : requirement<"+name+"> changed from 'required' to 'optional'" );
+				this.RequiredPlugins.removeAt( idx );
+			}
+		}
+
+		return( this );
+	}
+
+	// Helper function
+	Plugin@ SetDescription( string& text )
+	{
+		this.Description = text;
+
+		return( this );
+	}
+
+	array<uint> Requirements( array<string>@ required, array<string>@ optional ) final
+	{
+		array<uint> result = { 0, 0 };
+
+		for( uint r=0, rLen=this.RequiredPlugins.length(); r<rLen; r++ )
+		{
+			if( valid(required) )
+				required.insertLast( this.RequiredPlugins[r] );
+			result[0]++;
+		}
+
+		for( uint r=0, rLen=this.OptionalPlugins.length(); r<rLen; r++ )
+		{
+			if( valid(optional) )
+				optional.insertLast( this.OptionalPlugins[r] );
+			result[1]++;
+		}
+
+		return( result );
+	}
+
+	void OnEnable() {}
+
+	void OnDisable() {}
+
+	// Simulation of ~run functions
+	void Run( string& function, int p0, int p1, int p2, string@ text, array<int>@ data ) {}
+
+	// copies of engine functions
+
+	void loop() {}
+
+#ifndef __SERVER
+
+	void render_iface( uint layer ) {}
+
+	void render_map() {}
+
+	bool key_down( uint8 key, string& keyText )
+	{
+		return( false );
+	}
+
+	bool key_up( uint8 key, string& keyText )
+	{
+		return( false );
+	}
+
+	bool mouse_down( int click )
+	{
+		return( false );
+	}
+
+	bool mouse_up( int click )
+	{
+		return( false );
+	}
+
+	void mouse_move( int x, int y ) {}
+
+	void input_lost() {}
+
+#endif // !__SERVER
+
+#ifdef __CLIENT
+
+	void get_active_screens( array<int>& result ) {}
+
+	bool screen_change( bool show, int screen, int p0, int p1, int p2 )
+	{
+		return( false );
+	}
+
+	void critter_in( CritterCl& critter ) {}
+
+	void critter_out( CritterCl& critter ) {}
+
+	void item_map_in( ItemCl& item ) {}
+
+	void item_map_changed( ItemCl& newItem, ItemCl& oldItem ) {}
+
+	void item_map_out( ItemCl& item ) {}
+
+	void item_inv_in( ItemCl& item ) {}
+
+	void item_inv_out( ItemCl& item ) {}
+
+	bool map_message( string& message, uint16& hexX, uint16& hexY, uint& color, uint& delay )
+	{
+		return( true );
+	}
+
+	bool in_message( string& message, int& sayType, uint& critterId, uint& delay )
+	{
+		return( true );
+	}
+
+	bool out_message( string& message, int& sayType )
+	{
+		return( true );
+	}
+
+	void combat_result( array<uint>& data ) {}
+
+	string@ generic_description( int descType, int& offsetX, int& offsetY )
+	{
+		return( null );
+	}
+
+	string@ item_description( ItemCl& item, int lookType )
+	{
+		return( null );
+	}
+
+	string@ critter_description( CritterCl& cr, int lookType )
+	{
+		return( null );
+	}
+
+	void critter_action( bool localCall, CritterCl& critter, int action, int actionExt, ItemCl@ item ) {}
+
+#endif // __CLIENT
+
+#ifdef __MAPPER
+
+	bool console_message( string& message )
+	{
+		return( false );
+	}
+
+#endif // __MAPPER
+
+#ifdef __SERVER
+
+	bool start()
+	{
+		return( true );
+	}
+
+	void finish() {}
+
+	// global_process
+
+	// global_invite
+
+	void critter_init( Critter& cr, bool firstTime ) {}
+
+	void critter_finish( Critter& cr, bool toDelete ) {}
+
+	void critter_idle( Critter& cr ) {}
+
+	void critter_attack( Critter& cr, Critter& target, ProtoItem& weapon, uint8 weaponMode, ProtoItem@ ammo ) {}
+
+	void critter_attacked( Critter& cr, Critter& attacker ) {}
+
+	void critter_reload_weapon( Critter& cr, Item& weapon, Item@ ammo ) {}
+
+	void critter_dead( Critter& cr, Critter@ killer ) {}
+
+	void critter_respawn( Critter& cr ) {}
+
+	void map_critter_in( Map& map, Critter& cr ) {}
+
+	void map_critter_out( Map& map, Critter& cr ) {}
+
+	void items_crafted( array<Item@>& items, array<uint>& itemsCount, array<Item@>& resources, Critter& cr ) {}
+
+	void turn_based_begin( Map& map ) {}
+
+	void turn_based_end( Map& map ) {}
+
+	void turn_based_process( Map& map, Critter& cr, bool beginTurn ) {}
+
+	void turn_based_sequence( Map& map, array<Critter@>& critters, Critter@ firstTurnCr ) {}
+
+	void world_save() {}
+
+	bool player_login( uint ip, string& name, uint id, uint& textMsg, uint& strNum )
+	{
+		return( true );
+	}
+
+	void player_levelup( Critter& cr, uint skillIdx, uint skillUp, uint perkIdx ) {}
+
+	bool player_getaccess( Critter& cr, int access, string& password )
+	{
+		return( true );
+	}
+
+	bool player_allowcommand( Critter@ cr, string@ adminUser, uint8 command )
+	{
+		return( true );
+	}
+
+	bool player_registration( uint ip, string& name, uint& textMsg, uint& strNum )
+	{
+		return( true );
+	}
+
+#endif // __SERVER
+
+};
+
+shared class PluginPriority
+{
+	private array<array<uint16>> priority = {};
+
+	PluginPriority() {}
+
+	uint16 get_opIndex( PluginPriorityName name ) final
+	{
+		if( name <= PLUGIN_PRIORITY_BEGIN || name >= PLUGIN_PRIORITY_END )
+			return( 0 );
+
+		for( uint p=0, pLen=this.priority.length(); p<pLen; p++ )
+		{
+			array<uint16> func = this.priority[p];
+			if( func.length() != 2 )
+				continue;
+
+			if( func[0] == uint16(name) )
+				return( func[1] );
+		}
+
+		return( 0 );
+	}
+
+	void set_opIndex( PluginPriorityName name, uint16 value ) final
+	{
+		if( name <= PLUGIN_PRIORITY_BEGIN || name >= PLUGIN_PRIORITY_END )
+		{
+			Log( "Invalid priority<"+name+">" );
+			return;
+		}
+
+		for( uint p=0, pLen=this.priority.length(); p<pLen; p++ )
+		{
+			array<uint16> func = this.priority[p];
+			if( func.length() != 2 )
+				continue;
+
+			if( func[0] == uint16(name) )
+			{
+				func[1] = value;
+				return;
+			}
+		}
+
+		array<uint16> newPriority = { name, value };
+		this.priority.insertLast( newPriority );
+	}
+};
+
+// plugin functions
+
+bool RegisterPlugin( Plugin@ plugin )
+{
+	return( RegisterPlugin( plugin, true ));
+}
+
+bool RegisterPlugin( Plugin@ plugin, bool enabled )
+{
+	if( invalid(plugin) )
+		Log( "Attempt to register invalid plugin" );
+	else if( plugin.Name.length() == 0 )
+		Log( "Attempt to register plugin without name" );
+	else if( plugin.Name == "*" )
+		Log( "Attempt to register plugin with invalid name<*>" );
+	else if( IsPlugin( plugin.Name ))
+		Log( "Plugin with name<"+plugin.Name+"> already registered" );
+	else
+	{
+		array<string> required, optional;
+		array<uint> rLen = plugin.Requirements( required, optional );
+		for( uint r=0; r<rLen[0]; r++ )
+		{
+			string pName = required[r];
+			if( !IsPlugin(pName) )
+			{
+				Log( "ERROR: Plugin<"+plugin.Name+"> : missing required plugin<"+pName+">" );
+				return( false );
+			}
+		}
+
+		for( uint r=0; r<rLen[1]; r++ )
+		{
+			string pName = optional[r];
+			if( !IsPlugin(pName) )
+			{
+				Log( "WARNING: Plugin<"+plugin.Name+"> missing optional plugin<"+pName+">" );
+			}
+		}
+
+		Plugins.insertLast( plugin );
+
+		SetPlugin( plugin.Name, enabled );
+		return( true );
+	}
+
+	return( false );
+}
+
+bool IsPlugin( string& name )
+{
+	Plugin@ plugin = GetPlugin( name );
+	if( valid(plugin) )
+		return( true );
+
+	return( false );
+}
+
+bool IsPluginEnabled( string& name )
+{
+	for( uint p=0, pLen=Plugins.length(); p<pLen; p++ )
+	{
+		Plugin@ plugin = Plugins[p];
+		if( plugin.Name == name && plugin.Enabled )
+			return( true );
+	}
+
+	return( false );
+}
+
+Plugin@ GetPlugin( string& name )
+{
+	for( uint p=0, pLen=Plugins.length(); p<pLen; p++ )
+	{
+		if( Plugins[p].Name == name )
+			return( Plugins[p] );
+	}
+
+	return( null );
+}
+
+uint GetPlugins( array<Plugin@>& plugins )
+{
+	uint result = 0;
+
+	for( uint p=0, pLen=Plugins.length(); p<pLen; p++ )
+	{
+		plugins.insertLast( Plugins[p] );
+		result++;
+	}
+
+	return( result );
+}
+
+uint GetPluginsCount()
+{
+	return( Plugins.length() );
+}
+
+uint GetEnabledPlugins( array<Plugin@>& plugins )
+{
+	uint result = 0;
+
+	for( uint p=0, pLen=Plugins.length(); p<pLen; p++ )
+	{
+		Plugin@ plugin = Plugins[p];
+		if( plugin.Enabled )
+		{
+			plugins.insertLast( plugin );
+			result++;
+		}
+	}
+
+	return( result );
+}
+
+uint GetEnabledPlugins( array<Plugin@>& plugins, PluginPriorityName priority )
+{
+	if( priority <= PLUGIN_PRIORITY_BEGIN || priority >= PLUGIN_PRIORITY_END )
+		return( 0 );
+
+	// Reinventing the wheel
+	array<Plugin@> copyPlugins = Plugins;
+	array<Plugin@> sortedPlugins;
+	uint result = 0;
+	while( copyPlugins.length() > 0 )
+	{
+
+		Plugin@ plugin = copyPlugins.first();
+		copyPlugins.removeFirst();
+
+		if( !plugin.Enabled )
+			continue;
+
+		result++;
+		bool added = false;
+		for( uint p=0, pLen=sortedPlugins.length(); p<pLen; p++ )
+		{
+			if( plugin.Priority[priority] > sortedPlugins[p].Priority[priority] )
+			{
+				sortedPlugins.insertAt( p, plugin );
+				added = true;
+				break;
+			}
+		}
+
+		if( !added )
+			sortedPlugins.insertLast( plugin );
+	}
+
+	for( uint p=0; p<result; p++ )
+	{
+		plugins.insertLast( sortedPlugins[p] );
+	}
+
+	return( result );
+}
+
+uint GetEnabledPluginsCount()
+{
+	array<Plugin@> plugins;
+	return( GetEnabledPlugins( plugins ));
+}
+
+uint GetDisabledPlugins( array<Plugin@>& plugins )
+{
+	uint result = 0;
+
+	for( uint p=0, pLen=Plugins.length(); p<pLen; p++ )
+	{
+		Plugin@ plugin = Plugins[p];
+		if( !plugin.Enabled )
+		{
+			plugins.insertLast( plugin );
+			result++;
+		}
+	}
+
+	return( result );
+}
+
+uint GetDisabledPluginsCount()
+{
+	array<Plugin@> plugins;
+	return( GetDisabledPlugins( plugins ));
+}
+
+array<uint> GetPluginsNames( array<string>& enabled, array<string>& disabled )
+{
+	array<uint> result = { 0, 0 };
+
+	for( uint p=0, pLen=Plugins.length(); p<pLen; p++ )
+	{
+		Plugin@ plugin= Plugins[p];
+		if( plugin.Enabled )
+		{
+			enabled.insertLast( plugin.Name );
+			result[0]++;
+		}
+		else
+		{
+			disabled.insertLast( plugin.Name );
+			result[1]++;
+		}
+	}
+
+	return( result );
+}
+
+uint GetPluginsOrder( array<array<string>>& strings )
+{
+	// List could be created by shared library, but we want to keep max portability.
+	array<string> names = {
+		"DUMMY",
+
+		"loop",
+#ifndef __SERVER
+		"render_iface",
+		"render_map",
+		"key_down",
+		"key_up",
+		"mouse_down",
+		"mouse_up",
+		"mouse_move",
+		"input_lost",
+#endif // !__SERVER
+#ifdef __CLIENT
+		"get_active_screens",
+		"screen_change",
+		"critter_in",
+		"critter_out",
+		"item_map_in",
+		"item_map_changed",
+		"item_map_out",
+		"item_inv_in",
+		"item_inv_out",
+		"map_message",
+		"in_message",
+		"out_message",
+		"combat_result",
+		"generic_description",
+		"item_description",
+		"critter_description",
+		"critter_action",
+#endif // __CLIENT
+#ifdef __MAPPER
+		"console_message",
+#endif // __MAPPER
+#ifdef __SERVER
+		"start",
+		"finish",
+	// global_process
+	// global_invite
+		"critter_init",
+		"critter_finish",
+		"critter_idle",
+		"critter_attack",
+		"critter_attacked",
+		"critter_reload_weapon",
+		"critter_dead",
+		"critter_respawn",
+		"map_critter_in",
+		"map_critter_out",
+		"items_crafted",
+		"turn_based_begin",
+		"turn_based_end",
+		"turn_based_process",
+		"turn_based_sequence",
+		"world_save",
+		"player_login",
+		"player_levelup",
+		"player_getaccess",
+		"player_allowcommand",
+		"player_registration",
+#endif // __SERVER
+	};
+
+	uint result = 0;
+	PluginPriorityName current = PluginPriorityName(PLUGIN_PRIORITY_BEGIN+1);
+
+	while( current < PLUGIN_PRIORITY_END )
+	{
+		array<string> pResult = { names[current] };
+
+		array<Plugin@> plugins;
+		uint pLen = GetEnabledPlugins( plugins, current );
+
+		for( uint p=0; p<pLen; p++ )
+		{
+			Plugin@ plugin = plugins[p];
+			pResult.insertLast( plugin.Name+":"+plugin.Priority[current] );
+		}
+
+		strings.insertLast( pResult );
+		current = PluginPriorityName( current+1 );
+		result++;
+	}
+
+	return( result );
+}
+
+void SetPlugin( string& name, bool enabled )
+{
+	Plugin@ plugin = GetPlugin( name );
+	if( valid(plugin) )
+	{
+		if( plugin.Enabled != enabled )
+		{
+			plugin.Enabled = enabled;
+
+			if( enabled )
+				plugin.OnEnable();
+			else
+				plugin.OnDisable();
+		}
+	}
+#ifndef __CLIENT
+	else
+		Log( "Unknown plugin<"+name+">" );
+#endif
+}
+
+void RunPluginFunction( string& plugin, string& function )
+{
+	RunPluginFunction( plugin, function, 0, 0, 0, null, null );
+}
+
+void RunPluginFunction( string& plugin, string& function, int p0 )
+{
+	RunPluginFunction( plugin, function, p0, 0, 0, null, null );
+}
+
+void RunPluginFunction( string& plugin, string& function, int p0, int p1 )
+{
+	RunPluginFunction( plugin, function, p0, p1, 0, null, null );
+}
+
+void RunPluginFunction( string& plugin, string& function, int p0, int p1, int p2 )
+{
+	RunPluginFunction( plugin, function, p0, p1, p2, null, null );
+}
+
+void RunPluginFunction( string& plugin, string& function, int p0, int p1, int p2, string& text )
+{
+	RunPluginFunction( plugin, function, p0, p1, p2, text, null );
+}
+
+void RunPluginFunction( string& plugin, string& function, string& text )
+{
+	RunPluginFunction( plugin, function, 0, 0, 0, text, null );
+}
+
+void RunPluginFunction( string& plugin, string& function, array<int>& data )
+{
+	RunPluginFunction( plugin, function, 0, 0, 0, null, data );
+}
+
+void RunPluginFunction( string& plugin, string& function, string& text, array<int>& data )
+{
+	RunPluginFunction( plugin, function, 0, 0, 0, text, data );
+}
+
+void RunPluginFunction( string& name, string& function, int p0, int p1, int p2, string@ text, array<int>@ data )
+{
+	if( name.length() == 0 || function.length() == 0 )
+		return;
+
+	if( name == "*" )
+	{
+		array<Plugin@> plugins;
+		uint pLen = GetPlugins( plugins );
+
+		for( uint p=0; p<pLen; p++ )
+		{
+			Plugins[p].Run( function, p0, p1, p2, text, data );
+		}
+	}
+	else
+	{
+		Plugin@ plugin = GetPlugin( name );
+		if( invalid(plugin) )
+			return;
+
+		plugin.Run( function, p0, p1, p2, text, data );
+	}
+}
+
+// engine funcions
+#define GET_PRIORITY_LIST#(id,arr) \
+	{ \
+		array<string> names; \
+		for( uint p=0, pLen=arr.length(); p<pLen; p++ ) \
+		{ \
+			if( arr[p].Enabled ) \
+				names.insertLast( arr[p].Name ); \
+		} \
+		string priority = id+": "; \
+		for( uint n=0, nLen=names.length(); n<nLen; n++ ) \
+		{ \
+			if( n > 0 ) \
+				priority += " -> "; \
+			priority += names[n]; \
+		} \
+		if( priority.length() > id.length()+2 ) \
+			Log( priority ); \
+	}
+
+
+void Plugins_Loop()
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, loop );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].loop();
+	}
+}
+
+#ifndef __SERVER
+
+void Plugins_RenderIface( uint layer )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, render_iface );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].render_iface( layer );
+	}
+}
+
+void Plugins_RenderMap()
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, render_map );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].render_map();
+	}
+}
+
+bool Plugins_KeyDown( uint8 key, string& keyText )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, key_down );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		if( plugins[p].key_down( key, keyText ))
+			return( true );
+	}
+
+	return( false );
+}
+
+bool Plugins_KeyUp( uint8 key, string& keyText )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, key_up );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		if( plugins[p].key_up( key, keyText ))
+			return( true );
+	}
+
+	return( false );
+}
+
+bool Plugins_MouseDown( int click )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, mouse_down );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		if( plugins[p].mouse_down( click ))
+			return( true );
+	}
+
+	return( false );
+}
+
+bool Plugins_MouseUp( int click )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, mouse_up );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		if( plugins[p].mouse_up( click ))
+			return( true );
+	}
+
+	return( false );
+}
+
+void Plugins_MouseMove( int x, int y )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, mouse_move );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].mouse_move( x, y );
+	}
+}
+
+void Plugins_InputLost()
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, input_lost );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].input_lost();
+	}
+}
+
+#endif // !__SERVER
+
+#ifdef __CLIENT
+
+void Plugins_GetActiveScreens( array<int>& result )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, get_active_screens );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].get_active_screens( result );
+	}
+}
+
+bool Plugins_ScreenChange( bool show, int screen, int p0, int p1, int p2 )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, screen_change );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		if( plugins[p].screen_change( show, screen, p0, p1, p2 ))
+			return( true );
+	}
+
+	return( false );
+}
+
+
+void Plugins_CritterIn( CritterCl& critter )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, critter_in );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].critter_in( critter );
+	}
+}
+
+void Plugins_CritterOut( CritterCl& critter )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, critter_out );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].critter_out( critter );
+	}
+}
+
+void Plugins_ItemMapIn( ItemCl& item )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, item_map_in );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].item_map_in( item );
+	}
+}
+
+void Plugins_ItemMapChanged( ItemCl& newItem, ItemCl& oldItem )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, item_map_changed );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].item_map_changed( newItem, oldItem );
+	}
+}
+
+void Plugins_ItemMapOut( ItemCl& item )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, item_map_out );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].item_map_out( item );
+	}
+}
+
+void Plugins_ItemInvIn( ItemCl& item )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, item_inv_in );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].item_inv_in( item );
+	}
+}
+
+void Plugins_ItemInvOut( ItemCl& item )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, item_inv_out );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].item_inv_out( item );
+	}
+}
+
+bool Plugins_MapMessage( string& message, uint16& hexX, uint16& hexY, uint& color, uint& delay )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, map_message );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		if( !plugins[p].map_message( message, hexX, hexY, color, delay ))
+			return( false );
+	}
+
+	return( true );
+}
+
+bool Plugins_InMessage( string& message, int& sayType, uint& critterId, uint& delay )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, in_message );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		if( !plugins[p].in_message( message, sayType, critterId, delay ))
+			return( false );
+	}
+
+	return( true );
+}
+
+bool Plugins_OutMessage( string& message, int& sayType )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, out_message );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		if( !plugins[p].out_message( message, sayType ))
+			return( false );
+	}
+
+	return( true );
+}
+
+void Plugins_CombatResult( array<uint>& data )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, combat_result );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].combat_result( data );
+	}
+}
+
+string@ Plugins_GenericDescription( int descType, int& offsetX, int& offsetY )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, generic_description );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		string@ result = plugins[p].generic_description( descType, offsetX, offsetY );
+		if( valid(result) && result.length() > 0 )
+			return( result );
+	}
+
+	return( null );
+}
+
+string@ Plugins_ItemDescription( ItemCl& item, int lookType )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, item_description );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		string@ result = plugins[p].item_description( item, lookType );
+		if( valid(result) && result.length() > 0 )
+		return( result );
+	}
+
+	return( null );
+}
+
+string@ Plugins_CritterDescription( CritterCl& cr, int lookType )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, critter_description );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		string@ result = plugins[p].critter_description( cr, lookType );
+		if( valid(result) && result.length() > 0 )
+			return( result );
+	}
+
+	return( null );
+}
+
+void Plugins_CritterAction( bool localCall, CritterCl& critter, int action, int actionExt, ItemCl@ item )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, critter_action );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].critter_action( localCall, critter, action, actionExt, item );
+	}
+}
+
+#endif // __CLIENT
+
+#ifdef __MAPPER
+
+bool Plugins_ConsoleMessage( string& message )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, console_message );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		if( plugins[p].console_message( message ))
+			return( true );
+	}
+
+	return( false );
+}
+
+#endif // __MAPPER
+
+#ifdef __SERVER
+
+bool Plugins_Start()
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, start );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		if( !plugins[p].start() )
+			return( false );
+	}
+
+	return( true );
+}
+
+void Plugins_Finish()
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, finish );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].finish();
+	}
+}
+
+void Plugins_CritterInit( Critter& cr, bool firstTime )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, critter_init );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		Log( "critter_init: "+plugins[p].Name );
+		plugins[p].critter_init( cr, firstTime );
+	}
+}
+
+void Plugins_CritterFinish( Critter& cr, bool toDelete )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, critter_finish );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].critter_finish( cr, toDelete );
+	}
+}
+
+void Plugins_CritterIdle( Critter& cr )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, critter_idle );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].critter_idle( cr );
+	}
+}
+
+void Plugins_CritterAttack( Critter& cr, Critter& target, ProtoItem& weapon, uint8 weaponMode, ProtoItem@ ammo )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, critter_attack );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].critter_attack( cr, target, weapon, weaponMode, ammo );
+	}
+}
+
+void Plugins_CritterAttacked( Critter& cr, Critter& attacker )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, critter_attacked );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].critter_attacked( cr, attacker );
+	}
+}
+
+void Plugins_CritterReloadWeapon( Critter& cr, Item& weapon, Item@ ammo )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, critter_reload_weapon );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].critter_reload_weapon( cr, weapon, ammo );
+	}
+}
+void Plugins_CritterDead( Critter& cr, Critter@ killer )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, critter_dead );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].critter_dead( cr, killer );
+	}
+}
+
+void Plugins_CritterRespawn( Critter& cr )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, critter_respawn );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].critter_respawn( cr );
+	}
+}
+
+void Plugins_MapCritterIn( Map& map, Critter& cr )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, map_critter_in );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].map_critter_in( map, cr );
+	}
+}
+
+void Plugins_MapCritterOut( Map& map, Critter& cr )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, map_critter_out );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].map_critter_out( map, cr );
+	}
+}
+
+void Plugins_ItemsCrafted( array<Item@>& items, array<uint>& itemsCount, array<Item@>& resources, Critter& cr )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, items_crafted );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].items_crafted( items, itemsCount, resources, cr );
+	}
+}
+
+void Plugins_TurnBasedBegin( Map& map )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, turn_based_begin );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].turn_based_begin( map );
+	}
+}
+
+void Plugins_TurnBasedEnd( Map& map )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, turn_based_end );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].turn_based_end( map );
+	}
+}
+
+void Plugins_TurnBasedProcess( Map& map, Critter& cr, bool beginTurn )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, turn_based_process );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].turn_based_process( map, cr, beginTurn );
+	}
+}
+
+void Plugins_TurnBasedSequence( Map& map, array<Critter@>& critters, Critter@ firstTurnCr )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, turn_based_sequence );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].turn_based_sequence( map, critters, firstTurnCr );
+	}
+}
+
+void Plugins_WorldSave()
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, world_save );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].world_save();
+	}
+}
+
+bool Plugins_PlayerLogin( uint ip, string& name, uint id, uint& textMsg, uint& strNum )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, player_login );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		if( !plugins[p].player_login( ip, name, id, textMsg, strNum ))
+			return( false );
+	}
+
+	return( true );
+}
+
+void Plugins_PlayerLevelup( Critter& cr, uint skillIdx, uint skillUp, uint perkIdx )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, player_levelup );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].player_levelup( cr, skillIdx, skillUp, perkIdx );
+	}
+}
+
+bool Plugins_PlayerGetaccess( Critter& cr, int access, string& password )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, player_getaccess );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		if( !plugins[p].player_getaccess( cr, access, password ))
+			return( false );
+	}
+
+	return( true );
+}
+
+bool Plugins_PlayerAllowcommand( Critter@ cr, string@ adminUser, uint8 command )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, player_allowcommand );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		if( !plugins[p].player_allowcommand( cr, adminUser, command ))
+			return( false );
+	}
+
+	return( true );
+}
+
+bool Plugins_PlayerRegistration( uint ip, string& name, uint& textMsg, uint& strNum )
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, player_registration );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		if( !plugins[p].player_registration( ip, name, textMsg, strNum ))
+			return( false );
+	}
+
+	return( true );
+}
+
+#endif // __SERVER
+
+#endif // __PLUGIN__ //

@@ -1,0 +1,193 @@
+#ifndef __PLUGIN_H__
+#define __PLUGIN_H__
+
+// NOTE: "plugin" module must be loaded before any other modules using it
+
+#pragma globalvar "bool __PluginFirstTime = false"
+#pragma ignore "plugin"
+
+shared enum PluginPriorityName
+{
+	PLUGIN_PRIORITY_BEGIN = 0, // always first
+
+	loop,
+#ifndef __SERVER
+	render_iface,
+	render_map,
+	key_down,
+	key_up,
+	mouse_down,
+	mouse_up,
+	mouse_move,
+	input_lost,
+#endif // !__SERVER
+#ifdef __CLIENT
+	get_active_screens,
+	screen_change,
+	critter_in,
+	critter_out,
+	item_map_in,
+	item_map_changed,
+	item_map_out,
+	item_inv_in,
+	item_inv_out,
+	map_message,
+	in_message,
+	out_message,
+	combat_result,
+	generic_description,
+	item_description,
+	critter_description,
+	critter_action,
+#endif // __CLIENT
+#ifdef __MAPPER
+	console_message,
+#endif // __MAPPER
+#ifdef __SERVER
+	start,
+	finish,
+	// global_process
+	// global_invite
+	critter_init,
+	critter_finish,
+	critter_idle,
+	critter_attack,
+	critter_attacked,
+	critter_reload_weapon,
+	critter_dead,
+	critter_respawn,
+	map_critter_in,
+	map_critter_out,
+	items_crafted,
+	turn_based_begin,
+	turn_based_end,
+	turn_based_process,
+	turn_based_sequence,
+	world_save,
+	player_login,
+	player_levelup,
+	player_getaccess,
+	player_allowcommand,
+	player_registration,
+#endif // __SERVER
+
+	PLUGIN_PRIORITY_END // always last
+};
+
+#ifndef __PLUGIN__
+
+#ifdef __ASCOMPILER
+#include "plugin.fos"
+#endif
+#ifndef __ASCOMPILER
+shared class Plugin {};
+shared class PluginPriority {};
+
+import bool RegisterPlugin( Plugin@ plugin ) from "plugin";
+import bool RegisterPlugin( Plugin@ plugin, bool enabled ) from "plugin";
+
+import bool IsPlugin( string& name ) from "plugin";
+import bool IsPluginEnabled( string& name ) from "plugin";
+import Plugin@ GetPlugin( string& name ) from "plugin";
+import uint GetPlugins( array<Plugin@>& plugins ) from "plugin";
+import uint GetPluginsCount() from "plugin";
+import uint GetEnabledPlugins( array<Plugin@>& plugins ) from "plugin";
+import uint GetEnabledPlugins( array<Plugin@>& plugins, PluginPriorityName priority ) from "plugin";
+import uint GetEnabledPluginsCount() from "plugin";
+import uint GetDisabledPlugins( array<Plugin@>& plugins ) from "plugin";
+import uint GetDisabledPluginsCount() from "plugin";
+import array<uint> GetPluginsNames( array<string>& enabled, array<string>& disabled ) from "plugin";
+import uint GetPluginsOrder( array<array<string>>& strings ) from "plugin";
+
+import void SetPlugin( string& name, bool enabled ) from "plugin";
+
+//
+
+import void RunPluginFunction( string& name, string& function ) from "plugin";
+import void RunPluginFunction( string& name, string& function, int p0 ) from "plugin";
+import void RunPluginFunction( string& name, string& function, int p0, int p1 ) from "plugin";
+import void RunPluginFunction( string& name, string& function, int p0, int p1, int p2 ) from "plugin";
+import void RunPluginFunction( string& name, string& function, int p0, int p1, int p2, string& text ) from "plugin";
+import void RunPluginFunction( string& name, string& function, string& text ) from "plugin";
+import void RunPluginFunction( string& name, string& function, array<int>& data ) from "plugin";
+import void RunPluginFunction( string& name, string& function, string& text, array<int>& data ) from "plugin";
+import void RunPluginFunction( string& name, string& function, int p0, int p1, int p2, string@ text, array<int>@ data ) from "plugin";
+
+//
+
+import void Plugins_Loop() from "plugin";
+
+#ifndef __SERVER
+
+import void Plugins_RenderIface( uint layer ) from "plugin";
+import void Plugins_RenderMap() from "plugin";
+import bool Plugins_KeyDown( uint8 key, string& keyText ) from "plugin";
+import bool Plugins_KeyUp( uint8 key, string& keyText ) from "plugin";
+import bool Plugins_MouseDown( int click ) from "plugin";
+import bool Plugins_MouseUp( int click ) from "plugin";
+import void Plugins_MouseMove( int x, int y ) from "plugin";
+import void Plugins_InputLost() from "plugin";
+
+#endif // !__SERVER
+
+#ifdef __CLIENT
+
+import void Plugins_GetActiveScreens( array<int>& result ) from "plugin";
+import bool Plugins_ScreenChange( bool show, int screen, int p0, int p1, int p2 ) from "plugin";
+import void Plugins_CritterIn( CritterCl& critter ) from "plugin";
+import void Plugins_CritterOut( CritterCl& critter ) from "plugin";
+import void Plugins_ItemMapIn( ItemCl& item ) from "plugin";
+import void Plugins_ItemMapChanged( ItemCl& newItem, ItemCl& oldItem ) from "plugin";
+import void Plugins_ItemMapOut( ItemCl& item ) from "plugin";
+import void Plugins_ItemInvIn( ItemCl& item ) from "plugin";
+import void Plugins_ItemInvOut( ItemCl& item ) from "plugin";
+import bool Plugins_MapMessage( string& message, uint16& hexX, uint16& hexY, uint& color, uint& delay ) from "plugin";
+import bool Plugins_InMessage( string& message, int& sayType, uint& critterId, uint& delay ) from "plugin";
+import bool Plugins_OutMessage( string& message, int& sayType ) from "plugin";
+import void Plugins_CombatResult( array<uint>& data ) from "plugin";
+import string@ Plugins_GenericDescription( int descType, int& offsetX, int& offsetY ) from "plugin";
+import string@ Plugins_ItemDescription( ItemCl& item, int lookType ) from "plugin";
+import string@ Plugins_CritterDescription( CritterCl& cr, int lookType ) from "plugin";
+import void Plugins_CritterAction( bool localCall, CritterCl& critter, int action, int actionExt, ItemCl@ item ) from "plugin";
+
+#endif // __CLIENT
+
+#ifdef __MAPPER
+
+import bool Plugins_ConsoleMessage( string& message ) from "plugin";
+
+#endif // __MAPPER
+
+#ifdef __SERVER
+
+import bool Plugins_Start() from "plugin";
+import void Plugins_Finish() from "plugin";
+import void Plugins_CritterInit( Critter& cr, bool firstTime ) from "plugin";
+import void Plugins_CritterFinish( Critter& cr, bool toDelete ) from "plugin";
+import void Plugins_CritterIdle( Critter& cr ) from "plugin";
+import void Plugins_CritterAttack( Critter& cr, Critter& target, ProtoItem& weapon, uint8 weaponMode, ProtoItem@ ammo ) from "plugin";
+import void Plugins_CritterAttacked( Critter& cr, Critter& attacker ) from "plugin";
+import void Plugins_CritterReloadWeapon( Critter& cr, Item& weapon, Item@ ammo ) from "plugin";
+import void Plugins_CritterDead( Critter& cr, Critter@ killer ) from "plugin";
+import void Plugins_CritterRespawn( Critter& cr ) from "plugin";
+import void Plugins_MapCritterIn( Map& map, Critter& cr ) from "plugin";
+import void Plugins_MapCritterOut( Map& map, Critter& cr ) from "plugin";
+import void Plugins_ItemsCrafted( array<Item@>& items, array<uint>& itemsCount, array<Item@>& resources, Critter& cr ) from "plugin";
+import void Plugins_TurnBasedBegin( Map& map ) from "plugin";
+import void Plugins_TurnBasedEnd( Map& map ) from "plugin";
+import void Plugins_TurnBasedProcess( Map& map, Critter& cr, bool beginTurn ) from "plugin";
+import void Plugins_TurnBasedSequence( Map& map, array<Critter@>& critters, Critter@ firstTurnCr ) from "plugin";
+import void Plugins_WorldSave() from "plugin";
+import bool Plugins_PlayerRegistration( uint ip, string& name, uint& textMsg, uint& strNum ) from "plugin";
+import bool Plugins_PlayerLogin( uint ip, string& name, uint id, uint& textMsg, uint& strNum ) from "plugin";
+import void Plugins_PlayerLevelup( Critter& cr, uint skillIdx, uint skillUp, uint perkIdx ) from "plugin";
+import bool Plugins_PlayerGetaccess( Critter& cr, int access, string& password ) from "plugin";
+import bool Plugins_PlayerAllowcommand( Critter@ cr, string@ adminUser, uint8 command ) from "plugin";
+
+#endif // __SERVER
+
+#endif // !__ASCOMPILER
+
+#endif // !__PLUGIN__
+
+#endif // __PLUGIN_H__ //
