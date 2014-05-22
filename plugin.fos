@@ -27,8 +27,8 @@ shared class Plugin
 	// If false, copies of engine reserved functions won't be executed
 	bool Enabled = false;
 
-	private array<string> RequiredPlugins = {};
-	private array<string> OptionalPlugins = {};
+	private array<string> RequiredPlugins;
+	private array<string> OptionalPlugins;
 
 	PluginPriority Priority = PluginPriority();
 
@@ -323,7 +323,7 @@ shared class Plugin
 
 shared class PluginPriority
 {
-	private array<array<uint16>> priority = {};
+	private array<array<uint16>> priority;
 
 	PluginPriority() {}
 
