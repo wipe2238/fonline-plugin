@@ -1,377 +1,15 @@
 #ifndef __PLUGIN__
 #define __PLUGIN__
 
-// NOTE: "plugin" module must be loaded before any other modules using it
-
 #include "plugin_h.fos"
-
-#ifndef valid
-	#define valid #(obj)	(@obj!=null)
-#endif
-#ifndef invalid
-	#define invalid #(obj)	(@obj==null)
-#endif
-
-#pragma globalvar "uint __PluginSorting = PLUGIN_PRIORITY_END"
 
 array<Plugin@> Plugins;
 
-shared class Plugin
-{
-	// Name of the plugin
-	string Name = "";
-
-	// Short description of the plugin
-	string Description = "";
-
-	// If false, copies of engine reserved functions won't be executed
-	bool Enabled = false;
-
-	private array<string> RequiredPlugins;
-	private array<string> OptionalPlugins;
-
-	PluginPriority Priority = PluginPriority();
-
-	// default constructor
-	Plugin( string& name )
-	{
-		this.Name = name;
-	}
-
-/*
-	int opCmp( Plugin& other )
-	{
-		if( __PluginSorting <= uint(PLUGIN_PRIORITY_BEGIN) || __PluginSorting >= uint(PLUGIN_PRIORITY_END) )
-		{
-			Log( "ERROR: invalid __PluginSorting value<"+__PluginSorting+"> when comparing plugin<"+this.Name+"> vs plugin<"+other.Name+">"  );
-			return( 0 );
-		}
-
-		PluginPriorityName name = PluginPriorityName(__PluginSorting);
-
-		uint16 thisPriority = this.Priority[name];
-		uint16 otherPriority = other.Priority[name];
-
-		if( thisPriority < otherPriority )
-			return( -1 );
-		else if( thisPriority > otherPriority )
-			return( 1 );
-		else
-			return( 0 );
-	}
-*/
-
-	// Saves another plugin name as a requirement, to be checked during registration
-	// If 'required' is set to true, plugin won't be possible to register if specified
-	// plugin is missing. Otherwise, only warning will be displayed.
-	Plugin@ Require( string& name, bool required = true ) final
-	{
-		if( name.length() == 0 )
-		{
-			Log( "ERROR: empty requirement by plugin<"+this.Name+">" );
-			return( this );
-		}
-		else if( name == "*" )
-		{
-			Log( "ERROR: invalid requirement<*> by plugin<"+this.Name+">" );
-			return( this );
-		}
-		else if( this.Name == name )
-		{
-			Log( "ERROR: self requirement by plugin<"+this.Name+">" );
-			return( this );
-		}
-
-		if( required )
-		{
-			if( this.RequiredPlugins.find( name ) < 0 )
-				this.RequiredPlugins.insertLast( name );
-
-			int idx = this.OptionalPlugins.find( name );
-			if( idx >= 0 )
-			{
-				Log( "WARNING: plugin<"+this.Name+"> : requirement<"+name+"> changed from 'optional' to 'required'" );
-				this.OptionalPlugins.removeAt( idx );
-			}
-		}
-		else
-		{
-			if( this.OptionalPlugins.find( name ) < 0 )
-				this.OptionalPlugins.insertLast( name );
-
-			int idx = this.RequiredPlugins.find( name );
-			if( idx >= 0 )
-			{
-				Log( "WARNING: plugin<"+this.Name+"> : requirement<"+name+"> changed from 'required' to 'optional'" );
-				this.RequiredPlugins.removeAt( idx );
-			}
-		}
-
-		return( this );
-	}
-
-	// Helper function
-	Plugin@ SetDescription( string& text )
-	{
-		this.Description = text;
-
-		return( this );
-	}
-
-	array<uint> Requirements( array<string>@ required, array<string>@ optional ) final
-	{
-		array<uint> result = { 0, 0 };
-
-		for( uint r=0, rLen=this.RequiredPlugins.length(); r<rLen; r++ )
-		{
-			if( valid(required) )
-				required.insertLast( this.RequiredPlugins[r] );
-			result[0]++;
-		}
-
-		for( uint r=0, rLen=this.OptionalPlugins.length(); r<rLen; r++ )
-		{
-			if( valid(optional) )
-				optional.insertLast( this.OptionalPlugins[r] );
-			result[1]++;
-		}
-
-		return( result );
-	}
-
-	void OnEnable() {}
-
-	void OnDisable() {}
-
-	// Simulation of ~run functions
-	void Run( string& function, int p0, int p1, int p2, string@ text, array<int>@ data ) {}
-
-	// copies of engine functions
-
-	void loop() {}
-
-#ifndef __SERVER
-
-	void render_iface( uint layer ) {}
-
-	void render_map() {}
-
-	bool key_down( uint8 key, string& keyText )
-	{
-		return( false );
-	}
-
-	bool key_up( uint8 key, string& keyText )
-	{
-		return( false );
-	}
-
-	bool mouse_down( int click )
-	{
-		return( false );
-	}
-
-	bool mouse_up( int click )
-	{
-		return( false );
-	}
-
-	void mouse_move( int x, int y ) {}
-
-	void input_lost() {}
-
-#endif // !__SERVER
-
-#ifdef __CLIENT
-
-	void get_active_screens( array<int>& result ) {}
-
-	bool screen_change( bool show, int screen, int p0, int p1, int p2 )
-	{
-		return( false );
-	}
-
-	void critter_in( CritterCl& critter ) {}
-
-	void critter_out( CritterCl& critter ) {}
-
-	void item_map_in( ItemCl& item ) {}
-
-	void item_map_changed( ItemCl& newItem, ItemCl& oldItem ) {}
-
-	void item_map_out( ItemCl& item ) {}
-
-	void item_inv_in( ItemCl& item ) {}
-
-	void item_inv_out( ItemCl& item ) {}
-
-	bool map_message( string& message, uint16& hexX, uint16& hexY, uint& color, uint& delay )
-	{
-		return( true );
-	}
-
-	bool in_message( string& message, int& sayType, uint& critterId, uint& delay )
-	{
-		return( true );
-	}
-
-	bool out_message( string& message, int& sayType )
-	{
-		return( true );
-	}
-
-	void combat_result( array<uint>& data ) {}
-
-	string@ generic_description( int descType, int& offsetX, int& offsetY )
-	{
-		return( null );
-	}
-
-	string@ item_description( ItemCl& item, int lookType )
-	{
-		return( null );
-	}
-
-	string@ critter_description( CritterCl& cr, int lookType )
-	{
-		return( null );
-	}
-
-	void critter_action( bool localCall, CritterCl& critter, int action, int actionExt, ItemCl@ item ) {}
-
-#endif // __CLIENT
-
-#ifdef __MAPPER
-
-	bool console_message( string& message )
-	{
-		return( false );
-	}
-
-#endif // __MAPPER
-
-#ifdef __SERVER
-
-	bool start()
-	{
-		return( true );
-	}
-
-	void finish() {}
-
-	// global_process
-
-	// global_invite
-
-	void critter_init( Critter& cr, bool firstTime ) {}
-
-	void critter_finish( Critter& cr, bool toDelete ) {}
-
-	void critter_idle( Critter& cr ) {}
-
-	void critter_attack( Critter& cr, Critter& target, ProtoItem& weapon, uint8 weaponMode, ProtoItem@ ammo ) {}
-
-	void critter_attacked( Critter& cr, Critter& attacker ) {}
-
-	void critter_reload_weapon( Critter& cr, Item& weapon, Item@ ammo ) {}
-
-	void critter_dead( Critter& cr, Critter@ killer ) {}
-
-	void critter_respawn( Critter& cr ) {}
-
-	void map_critter_in( Map& map, Critter& cr ) {}
-
-	void map_critter_out( Map& map, Critter& cr ) {}
-
-	void items_crafted( array<Item@>& items, array<uint>& itemsCount, array<Item@>& resources, Critter& cr ) {}
-
-	void turn_based_begin( Map& map ) {}
-
-	void turn_based_end( Map& map ) {}
-
-	void turn_based_process( Map& map, Critter& cr, bool beginTurn ) {}
-
-	void turn_based_sequence( Map& map, array<Critter@>& critters, Critter@ firstTurnCr ) {}
-
-	void world_save() {}
-
-	bool player_login( uint ip, string& name, uint id, uint& textMsg, uint& strNum )
-	{
-		return( true );
-	}
-
-	void player_levelup( Critter& cr, uint skillIdx, uint skillUp, uint perkIdx ) {}
-
-	bool player_getaccess( Critter& cr, int access, string& password )
-	{
-		return( true );
-	}
-
-	bool player_allowcommand( Critter@ cr, string@ adminUser, uint8 command )
-	{
-		return( true );
-	}
-
-	bool player_registration( uint ip, string& name, uint& textMsg, uint& strNum )
-	{
-		return( true );
-	}
-
-#endif // __SERVER
-
-};
-
-shared class PluginPriority
-{
-	private array<array<uint16>> priority;
-
-	PluginPriority() {}
-
-	uint16 get_opIndex( PluginPriorityName name ) final
-	{
-		if( name <= PLUGIN_PRIORITY_BEGIN || name >= PLUGIN_PRIORITY_END )
-			return( 0 );
-
-		for( uint p=0, pLen=this.priority.length(); p<pLen; p++ )
-		{
-			array<uint16> func = this.priority[p];
-			if( func.length() != 2 )
-				continue;
-
-			if( func[0] == uint16(name) )
-				return( func[1] );
-		}
-
-		return( 0 );
-	}
-
-	void set_opIndex( PluginPriorityName name, uint16 value ) final
-	{
-		if( name <= PLUGIN_PRIORITY_BEGIN || name >= PLUGIN_PRIORITY_END )
-		{
-			Log( "Invalid priority<"+name+">" );
-			return;
-		}
-
-		for( uint p=0, pLen=this.priority.length(); p<pLen; p++ )
-		{
-			array<uint16> func = this.priority[p];
-			if( func.length() != 2 )
-				continue;
-
-			if( func[0] == uint16(name) )
-			{
-				func[1] = value;
-				return;
-			}
-		}
-
-		array<uint16> newPriority = { name, value };
-		this.priority.insertLast( newPriority );
-	}
-};
-
-// plugin functions
+// used to cache plugins before verification
+array<Plugin@> PluginsCache;
+array<bool>    PluginsCacheSetup;
+
+// plugin
 
 bool RegisterPlugin( Plugin@ plugin )
 {
@@ -380,7 +18,7 @@ bool RegisterPlugin( Plugin@ plugin )
 
 bool RegisterPlugin( Plugin@ plugin, bool enabled )
 {
-	if( invalid(plugin) )
+	if( !valid(plugin) )
 		Log( "Attempt to register invalid plugin" );
 	else if( plugin.Name.length() == 0 )
 		Log( "Attempt to register plugin without name" );
@@ -390,15 +28,49 @@ bool RegisterPlugin( Plugin@ plugin, bool enabled )
 		Log( "Plugin with name<"+plugin.Name+"> already registered" );
 	else
 	{
+		//Log( "Cached "+(enabled ? "en" : "dis")+"abled plugin: "+plugin.Name );
+
+		PluginsCache.insertLast( plugin );
+		PluginsCacheSetup.insertLast( enabled );
+
+		Log( "Registered plugin: "+plugin.Name+(plugin.Version > 0 ? ", v"+plugin.Version : "") );
+		return( true );
+	}
+
+	return( false );
+}
+
+void VerifyPlugins()
+{
+	if( PluginsCache.length() != PluginsCacheSetup.length() )
+	{
+		Log( "ERROR: Invalid plugins cache length" );
+		return;
+	}
+
+	for( uint p=0, pLen=PluginsCache.length(); p<pLen; p++ )
+	{
+		Plugin@ plugin = PluginsCache[p];
+
+		if( !valid(plugin) )
+		{
+			Log( "WARNING: invalid plugin in cache, idx<"+p+">" );
+			continue;
+		}
+
+		bool invalid = false;
 		array<string> required, optional;
 		array<uint> rLen = plugin.Requirements( required, optional );
+
+		// display all errors and warnings for each plugin
+
 		for( uint r=0; r<rLen[0]; r++ )
 		{
-			string pName = required[r];
-			if( !IsPlugin(pName) )
+			string rName = required[r];
+			if( !IsPlugin(rName) )
 			{
-				Log( "ERROR: Plugin<"+plugin.Name+"> : missing required plugin<"+pName+">" );
-				return( false );
+				Log( "ERROR: Plugin<"+plugin.Name+"> : missing required plugin<"+rName+">" );
+				invalid = true;
 			}
 		}
 
@@ -411,22 +83,23 @@ bool RegisterPlugin( Plugin@ plugin, bool enabled )
 			}
 		}
 
-		Plugins.insertLast( plugin );
+		if( invalid )
+		{
+			Log( "ERROR: Plugin<"+plugin.Name+"> : cannot initialize" );
+			continue;
+		}
 
-		SetPlugin( plugin.Name, enabled );
-		return( true );
+		Plugins.insertLast( plugin );
+		SetPlugin( plugin.Name, PluginsCacheSetup[p] );
 	}
 
-	return( false );
+	PluginsCache.resize(0);
+	PluginsCacheSetup.resize(0);
 }
 
 bool IsPlugin( string& name )
 {
-	Plugin@ plugin = GetPlugin( name );
-	if( valid(plugin) )
-		return( true );
-
-	return( false );
+	return( valid(GetPlugin(name)) );
 }
 
 bool IsPluginEnabled( string& name )
@@ -487,9 +160,11 @@ uint GetEnabledPlugins( array<Plugin@>& plugins )
 	return( result );
 }
 
-uint GetEnabledPlugins( array<Plugin@>& plugins, PluginPriorityName priority )
+uint GetEnabledPlugins( array<Plugin@>& plugins, string& priorityName )
 {
-	if( priority <= PLUGIN_PRIORITY_BEGIN || priority >= PLUGIN_PRIORITY_END )
+	PluginPriority priority;
+
+	if( priority.GetId( priorityName ) < 0 )
 		return( 0 );
 
 	// Reinventing the wheel
@@ -498,7 +173,6 @@ uint GetEnabledPlugins( array<Plugin@>& plugins, PluginPriorityName priority )
 	uint result = 0;
 	while( copyPlugins.length() > 0 )
 	{
-
 		Plugin@ plugin = copyPlugins.first();
 		copyPlugins.removeFirst();
 
@@ -509,7 +183,7 @@ uint GetEnabledPlugins( array<Plugin@>& plugins, PluginPriorityName priority )
 		bool added = false;
 		for( uint p=0, pLen=sortedPlugins.length(); p<pLen; p++ )
 		{
-			if( plugin.Priority[priority] > sortedPlugins[p].Priority[priority] )
+			if( plugin.priority[priorityName] > sortedPlugins[p].priority[priorityName] )
 			{
 				sortedPlugins.insertAt( p, plugin );
 				added = true;
@@ -582,78 +256,20 @@ array<uint> GetPluginsNames( array<string>& enabled, array<string>& disabled )
 
 uint GetPluginsOrder( array<array<string>>& strings )
 {
-	// List could be created by shared library, but we want to keep max portability.
-	array<string> names = {
-		"DUMMY",
+	PluginPriority priority;
 
-		"loop",
-#ifndef __SERVER
-		"render_iface",
-		"render_map",
-		"key_down",
-		"key_up",
-		"mouse_down",
-		"mouse_up",
-		"mouse_move",
-		"input_lost",
-#endif // !__SERVER
-#ifdef __CLIENT
-		"get_active_screens",
-		"screen_change",
-		"critter_in",
-		"critter_out",
-		"item_map_in",
-		"item_map_changed",
-		"item_map_out",
-		"item_inv_in",
-		"item_inv_out",
-		"map_message",
-		"in_message",
-		"out_message",
-		"combat_result",
-		"generic_description",
-		"item_description",
-		"critter_description",
-		"critter_action",
-#endif // __CLIENT
-#ifdef __MAPPER
-		"console_message",
-#endif // __MAPPER
-#ifdef __SERVER
-		"start",
-		"finish",
-	// global_process
-	// global_invite
-		"critter_init",
-		"critter_finish",
-		"critter_idle",
-		"critter_attack",
-		"critter_attacked",
-		"critter_reload_weapon",
-		"critter_dead",
-		"critter_respawn",
-		"map_critter_in",
-		"map_critter_out",
-		"items_crafted",
-		"turn_based_begin",
-		"turn_based_end",
-		"turn_based_process",
-		"turn_based_sequence",
-		"world_save",
-		"player_login",
-		"player_levelup",
-		"player_getaccess",
-		"player_allowcommand",
-		"player_registration",
-#endif // __SERVER
-	};
+	uint len = priority.GetNames().length;
 
-	uint result = 0;
-	PluginPriorityName current = PluginPriorityName(PLUGIN_PRIORITY_BEGIN+1);
-
-	while( current < PLUGIN_PRIORITY_END )
+	for( uint c=0; c<len; c++ )
 	{
-		array<string> pResult = { names[current] };
+		string@ current = priority.GetName( c );
+		if( !valid(current) )
+		{
+			Log( "ERROR: invalid priorityId<"+c+">" );
+			return( c );
+		}
+
+		array<string> pResult = { current };
 
 		array<Plugin@> plugins;
 		uint pLen = GetEnabledPlugins( plugins, current );
@@ -661,15 +277,13 @@ uint GetPluginsOrder( array<array<string>>& strings )
 		for( uint p=0; p<pLen; p++ )
 		{
 			Plugin@ plugin = plugins[p];
-			pResult.insertLast( plugin.Name+":"+plugin.Priority[current] );
+			pResult.insertLast( plugin.Name+":"+plugin.priority[current] );
 		}
 
 		strings.insertLast( pResult );
-		current = PluginPriorityName( current+1 );
-		result++;
 	}
 
-	return( result );
+	return( len );
 }
 
 void SetPlugin( string& name, bool enabled )
@@ -693,96 +307,33 @@ void SetPlugin( string& name, bool enabled )
 #endif
 }
 
-void RunPluginFunction( string& plugin, string& function )
+void RunPluginEvent( Plugin& sender, string& event, dictionary@ params )
 {
-	RunPluginFunction( plugin, function, 0, 0, 0, null, null );
-}
-
-void RunPluginFunction( string& plugin, string& function, int p0 )
-{
-	RunPluginFunction( plugin, function, p0, 0, 0, null, null );
-}
-
-void RunPluginFunction( string& plugin, string& function, int p0, int p1 )
-{
-	RunPluginFunction( plugin, function, p0, p1, 0, null, null );
-}
-
-void RunPluginFunction( string& plugin, string& function, int p0, int p1, int p2 )
-{
-	RunPluginFunction( plugin, function, p0, p1, p2, null, null );
-}
-
-void RunPluginFunction( string& plugin, string& function, int p0, int p1, int p2, string& text )
-{
-	RunPluginFunction( plugin, function, p0, p1, p2, text, null );
-}
-
-void RunPluginFunction( string& plugin, string& function, string& text )
-{
-	RunPluginFunction( plugin, function, 0, 0, 0, text, null );
-}
-
-void RunPluginFunction( string& plugin, string& function, array<int>& data )
-{
-	RunPluginFunction( plugin, function, 0, 0, 0, null, data );
-}
-
-void RunPluginFunction( string& plugin, string& function, string& text, array<int>& data )
-{
-	RunPluginFunction( plugin, function, 0, 0, 0, text, data );
-}
-
-void RunPluginFunction( string& name, string& function, int p0, int p1, int p2, string@ text, array<int>@ data )
-{
-	if( name.length() == 0 || function.length() == 0 )
+	if( event.length() == 0 )
 		return;
 
-	if( name == "*" )
-	{
-		array<Plugin@> plugins;
-		uint pLen = GetPlugins( plugins );
+	string senderName = sender.Name;
 
-		for( uint p=0; p<pLen; p++ )
-		{
-			Plugins[p].Run( function, p0, p1, p2, text, data );
-		}
-	}
-	else
-	{
-		Plugin@ plugin = GetPlugin( name );
-		if( invalid(plugin) )
-			return;
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins );
 
-		plugin.Run( function, p0, p1, p2, text, data );
+	for( uint p=0; p<pLen; p++ )
+	{
+		Plugin@ target = Plugins[p];
+
+		if( target.Name == senderName )
+			continue;
+
+		Plugins[p].OnEvent( senderName, event, params );
 	}
 }
 
 // engine funcions
-#define GET_PRIORITY_LIST#(id,arr) \
-	{ \
-		array<string> names; \
-		for( uint p=0, pLen=arr.length(); p<pLen; p++ ) \
-		{ \
-			if( arr[p].Enabled ) \
-				names.insertLast( arr[p].Name ); \
-		} \
-		string priority = id+": "; \
-		for( uint n=0, nLen=names.length(); n<nLen; n++ ) \
-		{ \
-			if( n > 0 ) \
-				priority += " -> "; \
-			priority += names[n]; \
-		} \
-		if( priority.length() > id.length()+2 ) \
-			Log( priority ); \
-	}
-
 
 void Plugins_Loop()
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, loop );
+	uint pLen = GetEnabledPlugins( plugins, "loop" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -795,7 +346,7 @@ void Plugins_Loop()
 void Plugins_RenderIface( uint layer )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, render_iface );
+	uint pLen = GetEnabledPlugins( plugins, "render_iface" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -806,7 +357,7 @@ void Plugins_RenderIface( uint layer )
 void Plugins_RenderMap()
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, render_map );
+	uint pLen = GetEnabledPlugins( plugins, "render_map" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -817,7 +368,7 @@ void Plugins_RenderMap()
 bool Plugins_KeyDown( uint8 key, string& keyText )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, key_down );
+	uint pLen = GetEnabledPlugins( plugins, "key_down" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -831,7 +382,7 @@ bool Plugins_KeyDown( uint8 key, string& keyText )
 bool Plugins_KeyUp( uint8 key, string& keyText )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, key_up );
+	uint pLen = GetEnabledPlugins( plugins, "key_up" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -845,7 +396,7 @@ bool Plugins_KeyUp( uint8 key, string& keyText )
 bool Plugins_MouseDown( int click )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, mouse_down );
+	uint pLen = GetEnabledPlugins( plugins, "mouse_down" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -859,7 +410,7 @@ bool Plugins_MouseDown( int click )
 bool Plugins_MouseUp( int click )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, mouse_up );
+	uint pLen = GetEnabledPlugins( plugins, "mouse_up" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -873,7 +424,7 @@ bool Plugins_MouseUp( int click )
 void Plugins_MouseMove( int x, int y )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, mouse_move );
+	uint pLen = GetEnabledPlugins( plugins, "mouse_move" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -884,7 +435,7 @@ void Plugins_MouseMove( int x, int y )
 void Plugins_InputLost()
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, input_lost );
+	uint pLen = GetEnabledPlugins( plugins, "input_lost" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -899,7 +450,7 @@ void Plugins_InputLost()
 void Plugins_GetActiveScreens( array<int>& result )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, get_active_screens );
+	uint pLen = GetEnabledPlugins( plugins, "get_active_screens" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -910,7 +461,7 @@ void Plugins_GetActiveScreens( array<int>& result )
 bool Plugins_ScreenChange( bool show, int screen, int p0, int p1, int p2 )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, screen_change );
+	uint pLen = GetEnabledPlugins( plugins, "screen_change" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -925,7 +476,7 @@ bool Plugins_ScreenChange( bool show, int screen, int p0, int p1, int p2 )
 void Plugins_CritterIn( CritterCl& critter )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, critter_in );
+	uint pLen = GetEnabledPlugins( plugins, "critter_in" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -936,7 +487,7 @@ void Plugins_CritterIn( CritterCl& critter )
 void Plugins_CritterOut( CritterCl& critter )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, critter_out );
+	uint pLen = GetEnabledPlugins( plugins, "critter_out" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -947,7 +498,7 @@ void Plugins_CritterOut( CritterCl& critter )
 void Plugins_ItemMapIn( ItemCl& item )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, item_map_in );
+	uint pLen = GetEnabledPlugins( plugins, "item_map_in" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -958,7 +509,7 @@ void Plugins_ItemMapIn( ItemCl& item )
 void Plugins_ItemMapChanged( ItemCl& newItem, ItemCl& oldItem )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, item_map_changed );
+	uint pLen = GetEnabledPlugins( plugins, "item_map_changed" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -969,7 +520,7 @@ void Plugins_ItemMapChanged( ItemCl& newItem, ItemCl& oldItem )
 void Plugins_ItemMapOut( ItemCl& item )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, item_map_out );
+	uint pLen = GetEnabledPlugins( plugins, "item_map_out" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -980,7 +531,7 @@ void Plugins_ItemMapOut( ItemCl& item )
 void Plugins_ItemInvIn( ItemCl& item )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, item_inv_in );
+	uint pLen = GetEnabledPlugins( plugins, "item_inv_in" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -991,7 +542,7 @@ void Plugins_ItemInvIn( ItemCl& item )
 void Plugins_ItemInvOut( ItemCl& item )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, item_inv_out );
+	uint pLen = GetEnabledPlugins( plugins, "item_inv_out" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1002,7 +553,7 @@ void Plugins_ItemInvOut( ItemCl& item )
 bool Plugins_MapMessage( string& message, uint16& hexX, uint16& hexY, uint& color, uint& delay )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, map_message );
+	uint pLen = GetEnabledPlugins( plugins, "map_message" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1016,7 +567,7 @@ bool Plugins_MapMessage( string& message, uint16& hexX, uint16& hexY, uint& colo
 bool Plugins_InMessage( string& message, int& sayType, uint& critterId, uint& delay )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, in_message );
+	uint pLen = GetEnabledPlugins( plugins, "in_message" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1030,7 +581,7 @@ bool Plugins_InMessage( string& message, int& sayType, uint& critterId, uint& de
 bool Plugins_OutMessage( string& message, int& sayType )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, out_message );
+	uint pLen = GetEnabledPlugins( plugins, "out_message" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1044,7 +595,7 @@ bool Plugins_OutMessage( string& message, int& sayType )
 void Plugins_CombatResult( array<uint>& data )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, combat_result );
+	uint pLen = GetEnabledPlugins( plugins, "combat_result" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1055,7 +606,7 @@ void Plugins_CombatResult( array<uint>& data )
 string@ Plugins_GenericDescription( int descType, int& offsetX, int& offsetY )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, generic_description );
+	uint pLen = GetEnabledPlugins( plugins, "generic_description" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1070,7 +621,7 @@ string@ Plugins_GenericDescription( int descType, int& offsetX, int& offsetY )
 string@ Plugins_ItemDescription( ItemCl& item, int lookType )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, item_description );
+	uint pLen = GetEnabledPlugins( plugins, "item_description" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1085,7 +636,7 @@ string@ Plugins_ItemDescription( ItemCl& item, int lookType )
 string@ Plugins_CritterDescription( CritterCl& cr, int lookType )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, critter_description );
+	uint pLen = GetEnabledPlugins( plugins, "critter_description" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1100,7 +651,7 @@ string@ Plugins_CritterDescription( CritterCl& cr, int lookType )
 void Plugins_CritterAction( bool localCall, CritterCl& critter, int action, int actionExt, ItemCl@ item )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, critter_action );
+	uint pLen = GetEnabledPlugins( plugins, "critter_action" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1115,7 +666,7 @@ void Plugins_CritterAction( bool localCall, CritterCl& critter, int action, int 
 bool Plugins_ConsoleMessage( string& message )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, console_message );
+	uint pLen = GetEnabledPlugins( plugins, "console_message" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1130,10 +681,21 @@ bool Plugins_ConsoleMessage( string& message )
 
 #ifdef __SERVER
 
+void Plugins_Init()
+{
+	array<Plugin@> plugins;
+	uint pLen = GetEnabledPlugins( plugins, "init" );
+
+	for( uint p=0; p<pLen; p++ )
+	{
+		plugins[p].init();
+	}
+}
+
 bool Plugins_Start()
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, start );
+	uint pLen = GetEnabledPlugins( plugins, "start" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1147,7 +709,7 @@ bool Plugins_Start()
 void Plugins_Finish()
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, finish );
+	uint pLen = GetEnabledPlugins( plugins, "finish" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1158,7 +720,7 @@ void Plugins_Finish()
 void Plugins_CritterInit( Critter& cr, bool firstTime )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, critter_init );
+	uint pLen = GetEnabledPlugins( plugins, "critter_init" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1170,7 +732,7 @@ void Plugins_CritterInit( Critter& cr, bool firstTime )
 void Plugins_CritterFinish( Critter& cr, bool toDelete )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, critter_finish );
+	uint pLen = GetEnabledPlugins( plugins, "critter_finish" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1181,7 +743,7 @@ void Plugins_CritterFinish( Critter& cr, bool toDelete )
 void Plugins_CritterIdle( Critter& cr )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, critter_idle );
+	uint pLen = GetEnabledPlugins( plugins, "critter_idle" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1192,7 +754,7 @@ void Plugins_CritterIdle( Critter& cr )
 void Plugins_CritterAttack( Critter& cr, Critter& target, ProtoItem& weapon, uint8 weaponMode, ProtoItem@ ammo )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, critter_attack );
+	uint pLen = GetEnabledPlugins( plugins, "critter_attack" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1203,7 +765,7 @@ void Plugins_CritterAttack( Critter& cr, Critter& target, ProtoItem& weapon, uin
 void Plugins_CritterAttacked( Critter& cr, Critter& attacker )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, critter_attacked );
+	uint pLen = GetEnabledPlugins( plugins, "critter_attacked" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1214,7 +776,7 @@ void Plugins_CritterAttacked( Critter& cr, Critter& attacker )
 void Plugins_CritterReloadWeapon( Critter& cr, Item& weapon, Item@ ammo )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, critter_reload_weapon );
+	uint pLen = GetEnabledPlugins( plugins, "critter_reload_weapon" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1224,7 +786,7 @@ void Plugins_CritterReloadWeapon( Critter& cr, Item& weapon, Item@ ammo )
 void Plugins_CritterDead( Critter& cr, Critter@ killer )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, critter_dead );
+	uint pLen = GetEnabledPlugins( plugins, "critter_dead" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1235,7 +797,7 @@ void Plugins_CritterDead( Critter& cr, Critter@ killer )
 void Plugins_CritterRespawn( Critter& cr )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, critter_respawn );
+	uint pLen = GetEnabledPlugins( plugins, "critter_respawn" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1246,7 +808,7 @@ void Plugins_CritterRespawn( Critter& cr )
 void Plugins_MapCritterIn( Map& map, Critter& cr )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, map_critter_in );
+	uint pLen = GetEnabledPlugins( plugins, "map_critter_in" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1257,7 +819,7 @@ void Plugins_MapCritterIn( Map& map, Critter& cr )
 void Plugins_MapCritterOut( Map& map, Critter& cr )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, map_critter_out );
+	uint pLen = GetEnabledPlugins( plugins, "map_critter_out" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1268,7 +830,7 @@ void Plugins_MapCritterOut( Map& map, Critter& cr )
 void Plugins_ItemsCrafted( array<Item@>& items, array<uint>& itemsCount, array<Item@>& resources, Critter& cr )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, items_crafted );
+	uint pLen = GetEnabledPlugins( plugins, "items_crafted" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1279,7 +841,7 @@ void Plugins_ItemsCrafted( array<Item@>& items, array<uint>& itemsCount, array<I
 void Plugins_TurnBasedBegin( Map& map )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, turn_based_begin );
+	uint pLen = GetEnabledPlugins( plugins, "turn_based_begin" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1290,7 +852,7 @@ void Plugins_TurnBasedBegin( Map& map )
 void Plugins_TurnBasedEnd( Map& map )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, turn_based_end );
+	uint pLen = GetEnabledPlugins( plugins, "turn_based_end" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1301,7 +863,7 @@ void Plugins_TurnBasedEnd( Map& map )
 void Plugins_TurnBasedProcess( Map& map, Critter& cr, bool beginTurn )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, turn_based_process );
+	uint pLen = GetEnabledPlugins( plugins, "turn_based_process" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1312,7 +874,7 @@ void Plugins_TurnBasedProcess( Map& map, Critter& cr, bool beginTurn )
 void Plugins_TurnBasedSequence( Map& map, array<Critter@>& critters, Critter@ firstTurnCr )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, turn_based_sequence );
+	uint pLen = GetEnabledPlugins( plugins, "turn_based_sequence" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1323,7 +885,7 @@ void Plugins_TurnBasedSequence( Map& map, array<Critter@>& critters, Critter@ fi
 void Plugins_WorldSave()
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, world_save );
+	uint pLen = GetEnabledPlugins( plugins, "world_save" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1334,7 +896,7 @@ void Plugins_WorldSave()
 bool Plugins_PlayerLogin( uint ip, string& name, uint id, uint& textMsg, uint& strNum )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, player_login );
+	uint pLen = GetEnabledPlugins( plugins, "player_login" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1348,7 +910,7 @@ bool Plugins_PlayerLogin( uint ip, string& name, uint id, uint& textMsg, uint& s
 void Plugins_PlayerLevelup( Critter& cr, uint skillIdx, uint skillUp, uint perkIdx )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, player_levelup );
+	uint pLen = GetEnabledPlugins( plugins, "player_levelup" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1359,7 +921,7 @@ void Plugins_PlayerLevelup( Critter& cr, uint skillIdx, uint skillUp, uint perkI
 bool Plugins_PlayerGetaccess( Critter& cr, int access, string& password )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, player_getaccess );
+	uint pLen = GetEnabledPlugins( plugins, "player_getaccess" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1373,7 +935,7 @@ bool Plugins_PlayerGetaccess( Critter& cr, int access, string& password )
 bool Plugins_PlayerAllowcommand( Critter@ cr, string@ adminUser, uint8 command )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, player_allowcommand );
+	uint pLen = GetEnabledPlugins( plugins, "player_allowcommand" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
@@ -1387,7 +949,7 @@ bool Plugins_PlayerAllowcommand( Critter@ cr, string@ adminUser, uint8 command )
 bool Plugins_PlayerRegistration( uint ip, string& name, uint& textMsg, uint& strNum )
 {
 	array<Plugin@> plugins;
-	uint pLen = GetEnabledPlugins( plugins, player_registration );
+	uint pLen = GetEnabledPlugins( plugins, "player_registration" );
 
 	for( uint p=0; p<pLen; p++ )
 	{

@@ -1,2 +1,3 @@
-*.fosp
+ASCompiler*
 *.fosb
+*.fosp
