@@ -111,11 +111,6 @@ shared class Plugin
 
 	// Helper functions
 
-	void LogInit() final
-	{
-		Log( "Initializing '"+this.name
-	}
-
 	Plugin@ Priority( string& priorityName, uint value )
 	{
 		this.priority[priorityName] = value;
@@ -159,9 +154,6 @@ shared class Plugin
 	}
 
 	void OnEvent( const string& sender, const string& event, const dictionary@ params ) {}
-
-	// Simulation of ~run functions
-	void Run( string& function, int p0, int p1, int p2, string@ text, array<int>@ data ) {}
 
 	// copies of engine functions
 
@@ -269,7 +261,10 @@ shared class Plugin
 
 #ifdef __SERVER
 
-	void init() {}
+	void init()
+	{
+		Log( "Initializing plugin: "+this.name );
+	}
 
 	bool start()
 	{
@@ -331,7 +326,7 @@ shared class Plugin
 		return( true );
 	}
 
-	bool player_registration( uint ip, string& name, uint& textMsg, uint& strNum )
+	bool player_registration( uint ip, string& name, uint& textMsg, uint& strNum, string& lexems )
 	{
 		return( true );
 	}
@@ -528,7 +523,7 @@ import void Plugins_TurnBasedEnd( Map& map ) from PLUGIN_MODULE;
 import void Plugins_TurnBasedProcess( Map& map, Critter& cr, bool beginTurn ) from PLUGIN_MODULE;
 import void Plugins_TurnBasedSequence( Map& map, array<Critter@>& critters, Critter@ firstTurnCr ) from PLUGIN_MODULE;
 import void Plugins_WorldSave() from PLUGIN_MODULE;
-import bool Plugins_PlayerRegistration( uint ip, string& name, uint& textMsg, uint& strNum ) from PLUGIN_MODULE;
+import bool Plugins_PlayerRegistration( uint ip, string& name, uint& textMsg, uint& strNum, string& lexems ) from PLUGIN_MODULE;
 import bool Plugins_PlayerLogin( uint ip, string& name, uint id, uint& textMsg, uint& strNum ) from PLUGIN_MODULE;
 import void Plugins_PlayerLevelup( Critter& cr, uint skillIdx, uint skillUp, uint perkIdx ) from PLUGIN_MODULE;
 import bool Plugins_PlayerGetaccess( Critter& cr, int access, string& password ) from PLUGIN_MODULE;

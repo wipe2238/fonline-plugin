@@ -28,8 +28,6 @@ bool RegisterPlugin( Plugin@ plugin, bool enabled )
 		Log( "Plugin with name<"+plugin.Name+"> already registered" );
 	else
 	{
-		//Log( "Cached "+(enabled ? "en" : "dis")+"abled plugin: "+plugin.Name );
-
 		PluginsCache.insertLast( plugin );
 		PluginsCacheSetup.insertLast( enabled );
 
@@ -89,8 +87,9 @@ void VerifyPlugins()
 			continue;
 		}
 
+		plugin.Enabled = PluginsCacheSetup[p];
+//		@plugin.RunEvent = RunPluginEvent;
 		Plugins.insertLast( plugin );
-		SetPlugin( plugin.Name, PluginsCacheSetup[p] );
 	}
 
 	PluginsCache.resize(0);
@@ -309,10 +308,10 @@ void SetPlugin( string& name, bool enabled )
 
 void RunPluginEvent( Plugin& sender, string& event, dictionary@ params )
 {
-	if( event.length() == 0 )
-		return;
-
 	string senderName = sender.Name;
+
+	if( senderName.length() == 0 || event.length() == 0 )
+		return;
 
 	array<Plugin@> plugins;
 	uint pLen = GetEnabledPlugins( plugins );
@@ -946,14 +945,14 @@ bool Plugins_PlayerAllowcommand( Critter@ cr, string@ adminUser, uint8 command )
 	return( true );
 }
 
-bool Plugins_PlayerRegistration( uint ip, string& name, uint& textMsg, uint& strNum )
+bool Plugins_PlayerRegistration( uint ip, string& name, uint& textMsg, uint& strNum, string& lexems )
 {
 	array<Plugin@> plugins;
 	uint pLen = GetEnabledPlugins( plugins, "player_registration" );
 
 	for( uint p=0; p<pLen; p++ )
 	{
-		if( !plugins[p].player_registration( ip, name, textMsg, strNum ))
+		if( !plugins[p].player_registration( ip, name, textMsg, strNum, lexems ))
 			return( false );
 	}
 
