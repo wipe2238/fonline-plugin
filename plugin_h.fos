@@ -4,530 +4,787 @@
 #pragma ignore "plugin"
 
 #ifndef PLUGIN_MODULE
-	#define PLUGIN_MODULE "plugin"
+ #define PLUGIN_MODULE "plugin"
 #endif
 
 #ifndef valid
-	#define valid#(obj)	(@obj!=null)
+ #define valid#(obj)	(@obj!=null)
 #endif
+
+#ifndef CritterMutual
+ #ifdef __CLIENT
+  #define CritterMutual CritterCl
+ #endif
+ #ifdef __SERVER
+  #define CritterMutual Critter
+ #endif
+#endif
+
+#ifndef ItemMutual
+ #ifdef __CLIENT
+  #define ItemMutual ItemCl
+ #endif
+ #ifdef __SERVER
+  #define ItemMutual Item
+ #endif
+#endif
+
+shared interface IPluginManager
+{
+    uint Count          { get; }
+    uint CountEnabled   { get; }
+    uint CountDisabled  { get; }
+
+    bool Enabled( string& name );
+    Plugin@ Get( string& name );
+    uint Get( array<Plugin@>& plugins );
+    uint GetEnabled( array<Plugin@>& plugins );
+    uint GetEnabled( array<Plugin@>& plugins, string& priorityName );
+    uint GetDisabled( array<Plugin@>& plugins );
+    uint GetDisabled( array<Plugin@>& plugins, string& priorityName );
+    void Set( string& name, bool enabled );
+
+    void Names( array<string>& enabled, array<string>& disabled );
+    uint Order( array<array<string>>& strings );
+
+    bool Register( Plugin@ plugin, bool enabled = true );
+    void Verify();
+
+// copies of engine functions
+
+    void finish();
+    void loop();
+
+#ifndef __MAPPER // client, server
+    bool critter_check_move_item( CritterMutual& critter, ItemMutual& item, uint8 toSlot, ItemMutual@ itemSwap );
+    void get_attack_distantion( uint& distantion, CritterMutual& critter, ItemMutual& item, uint8 mode );
+    void get_use_ap_cost( uint& cost, CritterMutual& cr, ItemMutual& item, uint8 mode );
+    void item_cost( uint& cost, ItemMutual& item, CritterMutual& critter, CritterMutual& npc, bool sell ); // non-standard
+    bool start();
+#endif // !__MAPPER
+
+#ifndef __SERVER // client, mapper
+    string@ critter_animation( int animType, uint crType, uint anim1, uint anim2, uint& pass, uint& flags, int& ox, int& oy );
+    bool critter_animation_fallout( uint crType, uint& anim1, uint& anim2, uint& anim1ex, uint& anim2ex, uint& flags );
+    bool critter_animation_substitute( int animType, uint crTypeBase, uint anim1Base, uint anim2Base, uint& crType, uint& anim1, uint& anim2 );
+    void input_lost();
+    void key_down( uint8 key, string@ text );
+    void key_up( uint8 key );
+    void mouse_down( int button );
+    void mouse_move();
+    void mouse_up( int button );
+    void render_iface( uint layer );
+    void render_map();
+#endif // !__SERVER
+
+#ifdef __CLIENT
+    void animation2d_process( bool animateStay, CritterCl& critter, uint anim1, uint anim2, ItemCl@ item );
+    void animation3d_process( bool animateStay, CritterCl& critter, uint anim1, uint anim2, ItemCl@ item );
+    bool check_interface_hit( int x, int y );
+    bool check_perk( CritterCl& critter, uint perk );
+    void combat_result( array<uint>& data );
+    void critter_action( bool localCall, CritterCl& critter, int action, int actionExt, Item@ item );
+    void critter_description( string& description, CritterCl& critter, int lookType ); // 'description' is non-standard
+    void critter_in( CritterCl& critter );
+    void critter_out( CritterCl& critter );
+    void filename_logfile( string& filename );
+    void filename_screenshot( string& filename );
+    void generic_description( string& description, int descType, int& offsX, int& offsY );
+    void get_active_screens( array<int>& );
+    bool get_cont_item( uint& itemId, bool& isEnemy );
+    bool get_elevator( uint type, array<uint>& data );
+    void hit_aim( uint8& aim );
+    bool in_message( string& message, int& sayType, uint& critterId, uint& delay );
+    void item_description( string& description, ItemCl& item, int lookType ); // 'description' is non-standard
+    void item_inv_changed( ItemCl& itemNow, ItemCl& itemBefore );
+    void item_inv_in( ItemCl& item );
+    void item_inv_out( ItemCl& item );
+    void item_map_changed( ItemCl& itemNow, ItemCl& itemBefore );
+    void item_map_in( ItemCl& item );
+    void item_map_out( ItemCl& item );
+    void items_collection( int collection, array<ItemCl>& items );
+    void map_message( string& message, uint16& hexX, uint16& hexY, uint& color, uint& delay );
+    void message_box( string& message, int type, bool scriptCall );
+    bool out_message( string& message, int& sayType );
+    bool player_data_check( array<int>& data );
+    void player_data_generate( array<int>& data );
+    void screen_change( bool show, int screen, dictionary@ params );
+    int to_hit( CritterCl& chosen, CritterCl& target, ProtoItem& weapon, uint8 weaponMode );
+#endif // !__CLIENT
+
+#ifdef __MAPPER
+    bool console_message( string& message );
+    void map_load( MapperMap& map );
+    void map_save( MapperMap& map );
+    void start();
+#endif // __MAPPER
+
+#ifdef __SERVER
+    /* TODO
+    bool check_look( Map& map, Critter& critter, Critter& opponent );
+    bool check_trap_look( Map& map, Critter& cr, Item& trap );
+    */
+    void critter_attack( Critter& critter, Critter& target, ProtoItem& weapon, uint8 weaponMode, ProtoItem@ ammo );
+    void critter_attacked( Critter& critter, Critter& attacker );
+    void critter_dead( Critter& critter, Critter@ killer );
+    void critter_finish( Critter& critter, bool toDelete );
+    void critter_idle( Critter& critter );
+    void critter_init( Critter& critter, bool firstTime );
+    void critter_move_item( Critter& critter, Item& item, uint8 fromSlot );
+    void critter_reload_weapon( Critter& critter, Item& weapon, Item@ ammo );
+    void critter_respawn( Critter& critter );
+    bool critter_stealing( Critter& critter, Critter& thief, Item& item, uint count );
+    bool critter_use_item( Critter& critter, Item& item, Critter@ targetCritter, Item@ targetItem, Scenery@ targetScen, uint param );
+    bool critter_use_skill( Critter& critter, int skill, Critter@ targetCritter, Item@ targetItem, Scenery@ targetScen );
+    void global_invite( Critter& leader, Item@ car, uint encounterDescriptor, int combatMode, uint& mapId, uint16& hexX, uint16& hexY, uint8& dir );
+    void global_process( int processType, Critter& critter, Item@ car, float& curX, float& curY, float& toX, float& toY, float& speed, uint& encounterDescriptor, bool& waitForAnswer );
+    bool items_barter( Item@[]& saleItems, uint[]& saleItemsCount, Item@[]& buyItems, uint[]& buyItemsCount, Critter& player, Critter& npc );
+    void items_crafted( array<Item@>& items, array<uint>& itemsCount, array<Item@>& resources, Critter& cr );
+    void karma_voting( Critter& crFrom, Critter& crTo, bool valUp );
+    void map_critter_in( Map& map, Critter& cr );
+    void map_critter_out( Map& map, Critter& cr );
+    /* TODO
+    bool npc_plane_begin( Critter& npc, NpcPlane& plane, int reason, Critter@ someCritter, Item@ someItem );
+    bool npc_plane_end( Critter& npc, NpcPlane& plane, int reason, Critter@ someCritter, Item@ someItem );
+    bool npc_plane_run( Critter& npc, NpcPlane& plane, int reason, uint& r0, uint& r1, uint& r2 );
+    */
+    bool player_allowcommand( Critter@ critter, string@ adminUser, uint8 command );
+    bool player_getaccess( Critter& critter, int access, string& password );
+    void player_levelup( Critter& critter, uint skillIdx, uint skillUp, uint perkIdx );
+    bool player_login( uint ip, string& name, uint id, uint& textMsg, uint& strNum, string& lexems );
+    bool player_registration( uint ip, string& name, uint& textMsg, uint& strNum, string& lexems );
+    void turn_based_begin( Map& map );
+    void turn_based_end( Map& map );
+    void turn_based_process( Map& map, Critter& critter, bool beginTurn );
+    void turn_based_sequence( Map& map, array<Critter@>& critters, Critter@ firstTurnCr );
+    void world_save();
+#endif // __SERVER
+};
 
 shared class Plugin
 {
 // properties
 
-	// Name of the plugin
-	private string name = "";
+    // Name of the plugin
+    private string name = "";
 
-	// Plugin version
-	private float version = 0.0;
+    // Plugin version
+    private float version = 0.0;
 
-	// Short description of the plugin
-	private string description = "";
+    // Short description of the plugin
+    private string description = "";
 
-	// If false, copies of engine reserved functions won't be executed
-	bool Enabled = false;
+    // If false, copies of engine reserved functions won't be executed
+    bool Enabled = false;
 
-	private array<string> RequiredPlugins;
-	private array<string> OptionalPlugins;
+    private array<string> RequiredPlugins;
+    private array<string> OptionalPlugins;
 
-	PluginPriority priority = PluginPriority();
+    PluginPriority priority = PluginPriority();
 
 // constructors
 
-	Plugin( string& name, float version, string description = "" )
-	{
-		this.name = name;
-		this.version = version;
-		this.description = description;
-	}
+    Plugin( string& name, float version, string description = "" )
+    {
+	this.name = name;
+	this.version = version;
+	this.description = description;
+    }
 
 // getters / setters
 
-	string get_Name()
-	{
-		return( this.name );
-	}
+    string get_Name()
+    {
+	return( this.name );
+    }
 
-	float get_Version()
-	{
-		return( this.version );
-	}
+    float get_Version()
+    {
+	return( this.version );
+    }
 
-	string get_Description()
-	{
-		return( this.description );
-	}
+    string get_Description()
+    {
+	return( this.description );
+    }
 
 // methods
 
-	// Saves another plugin name as a requirement, checked during initialization
-	// If 'required' is set to true, plugin won't be possible to initialize if specified
-	// plugin is missing. Otherwise, only warning will be displayed.
-	Plugin@ Require( string& name, bool required = true ) final
-	{
-		if( name.length() == 0 )
-		{
-			Log( "ERROR: empty requirement by plugin<"+this.Name+">" );
-			return( this );
-		}
-		else if( name == "*" )
-		{
-			Log( "ERROR: invalid requirement<*> by plugin<"+this.Name+">" );
-			return( this );
-		}
-		else if( this.Name == name )
-		{
-			Log( "ERROR: self requirement by plugin<"+this.Name+">" );
-			return( this );
-		}
+    // Saves another plugin name as a requirement, checked during initialization
+    // If 'required' is set to true, plugin won't be possible to initialize if specified
+    // plugin is missing. Otherwise, only warning will be displayed.
+    Plugin@ Require( string& name, bool required = true ) final
+    {
+        if( name.length() == 0 )
+        {
+            Log( "ERROR: empty requirement by plugin<"+this.Name+">" );
+            return( this );
+        }
+        else if( name == "*" )
+        {
+            Log( "ERROR: invalid requirement<*> by plugin<"+this.Name+">" );
+            return( this );
+        }
+        else if( this.Name == name )
+        {
+            Log( "ERROR: self requirement by plugin<"+this.Name+">" );
+            return( this );
+        }
 
-		if( required )
-		{
-			if( this.RequiredPlugins.find( name ) < 0 )
-				this.RequiredPlugins.insertLast( name );
+        if( required )
+        {
+            if( this.RequiredPlugins.find( name ) < 0 )
+                this.RequiredPlugins.insertLast( name );
 
-			int idx = this.OptionalPlugins.find( name );
-			if( idx >= 0 )
-			{
-				Log( "WARNING: plugin<"+this.Name+"> : requirement<"+name+"> changed from 'optional' to 'required'" );
-				this.OptionalPlugins.removeAt( idx );
-			}
-		}
-		else
-		{
-			if( this.OptionalPlugins.find( name ) < 0 )
-				this.OptionalPlugins.insertLast( name );
+            int idx = this.OptionalPlugins.find( name );
+            if( idx >= 0 )
+            {
+                Log( "WARNING: plugin<"+this.Name+"> : requirement<"+name+"> changed from 'optional' to 'required'" );
+                this.OptionalPlugins.removeAt( idx );
+            }
+        }
+        else
+        {
+            if( this.OptionalPlugins.find( name ) < 0 )
+                this.OptionalPlugins.insertLast( name );
 
-			int idx = this.RequiredPlugins.find( name );
-			if( idx >= 0 )
-			{
-				Log( "WARNING: plugin<"+this.Name+"> : requirement<"+name+"> changed from 'required' to 'optional'" );
-				this.RequiredPlugins.removeAt( idx );
-			}
-		}
+            int idx = this.RequiredPlugins.find( name );
+            if( idx >= 0 )
+            {
+                Log( "WARNING: plugin<"+this.Name+"> : requirement<"+name+"> changed from 'required' to 'optional'" );
+                this.RequiredPlugins.removeAt( idx );
+            }
+        }
 
-		return( this );
-	}
+        return( this );
+    }
 
-	// Helper functions
+    // Helper functions
 
-	Plugin@ Priority( string& priorityName, uint value )
-	{
-		this.priority[priorityName] = value;
+    Plugin@ Priority( string& priorityName, uint value )
+    {
+        this.priority[priorityName] = value;
 
-		return( this );
-	}
+        return( this );
+    }
 
-	array<uint> Requirements( array<string>@ required, array<string>@ optional ) final
-	{
-		array<uint> result = { 0, 0 };
+    array<uint> Requirements( array<string>@ required, array<string>@ optional ) final
+    {
+        array<uint> result = { 0, 0 };
 
-		for( uint r=0, rLen=this.RequiredPlugins.length(); r<rLen; r++ )
-		{
-			if( valid(required) )
-				required.insertLast( this.RequiredPlugins[r] );
-			result[0]++;
-		}
+        for( uint r=0, rLen=this.RequiredPlugins.length(); r<rLen; r++ )
+        {
+            if( valid(required) )
+                required.insertLast( this.RequiredPlugins[r] );
+            result[0]++;
+        }
 
-		for( uint r=0, rLen=this.OptionalPlugins.length(); r<rLen; r++ )
-		{
-			if( valid(optional) )
-				optional.insertLast( this.OptionalPlugins[r] );
-			result[1]++;
-		}
+        for( uint r=0, rLen=this.OptionalPlugins.length(); r<rLen; r++ )
+        {
+            if( valid(optional) )
+                optional.insertLast( this.OptionalPlugins[r] );
+            result[1]++;
+        }
 
-		return( result );
-	}
+        return( result );
+    }
 
-	// global events
+    // global events
 
-	void OnEnable() {}
+    void OnEnable() {}
 
-	void OnDisable() {}
+    void OnDisable() {}
 
-	// plugins events
+    // plugins events
 
-	void Event( string& event, dictionary@ params = null ) final
-	{
-		// TODO
-		// RunPluginEvent( this, event, params );
-	}
+    void Event( string& event, dictionary@ params = null ) final
+    {
+        // TODO
+        // RunPluginEvent( this, event, params );
+    }
 
-	void OnEvent( const string& sender, const string& event, const dictionary@ params ) {}
+    void OnEvent( const string& sender, const string& event, const dictionary@ params ) {}
 
-	// copies of engine functions
+// copies of engine functions
 
-	void loop() {}
+    void finish()
+    {
+    }
 
-#ifndef __SERVER
+    void loop()
+    {
+    }
 
-	void render_iface( uint layer ) {}
+#ifndef __MAPPER // client, server
+    bool critter_check_move_item( CritterMutual& critter, ItemMutual& item, uint8 toSlot, ItemMutual@ itemSwap )
+    {
+	return( true );
+    }
 
-	void render_map() {}
+    void get_attack_distantion( uint& distantion, CritterMutual& critter, ItemMutual& item, uint8 mode )
+    {
+    }
 
-	bool key_down( uint8 key, string& keyText )
-	{
-		return( false );
-	}
+    void get_use_ap_cost( uint& cost, CritterMutual& cr, ItemMutual& item, uint8 mode )
+    {
+    }
 
-	bool key_up( uint8 key, string& keyText )
-	{
-		return( false );
-	}
+    void item_cost( uint& cost, ItemMutual& item, CritterMutual& critter, CritterMutual& npc, bool sell )
+    {
+    }
 
-	bool mouse_down( int click )
-	{
-		return( false );
-	}
+    bool start()
+    {
+	return( true );
+    }
+#endif // !__MAPPER
 
-	bool mouse_up( int click )
-	{
-		return( false );
-	}
+#ifndef __SERVER // client, mapper
+    string@ critter_animation( int animType, uint crType, uint anim1, uint anim2, uint& pass, uint& flags, int& ox, int& oy )
+    {
+	return( null );
+    }
 
-	void mouse_move( int x, int y ) {}
+    bool critter_animation_fallout( uint crType, uint& anim1, uint& anim2, uint& anim1ex, uint& anim2ex, uint& flags )
+    {
+	return( false );
+    }
 
-	void input_lost() {}
+    bool critter_animation_substitute( int animType, uint crTypeBase, uint anim1Base, uint anim2Base, uint& crType, uint& anim1, uint& anim2 )
+    {
+	return( false );
+    }
 
+    void input_lost()
+    {
+    }
+
+    void key_down( uint8 key, string@ text )
+    {
+    }
+
+    void key_up( uint8 key )
+    {
+    }
+
+    void mouse_down( int button )
+    {
+    }
+
+    void mouse_move()
+    {
+    }
+
+    void mouse_up( int button )
+    {
+    }
+
+    void render_iface( uint layer )
+    {
+    }
+
+    void render_map()
+    {
+    }
 #endif // !__SERVER
 
 #ifdef __CLIENT
+    void animation2d_process( bool animateStay, CritterCl& critter, uint anim1, uint anim2, ItemCl@ item )
+    {
+    }
 
-	void get_active_screens( array<int>& result ) {}
+    void animation3d_process( bool animateStay, CritterCl& critter, uint anim1, uint anim2, ItemCl@ item )
+    {
+    }
 
-	bool screen_change( bool show, int screen, int p0, int p1, int p2 )
-	{
-		return( false );
-	}
+    bool check_interface_hit( int x, int y )
+    {
+	return( false );
+    }
 
-	void critter_in( CritterCl& critter ) {}
+    bool check_perk( CritterCl& critter, uint perk )
+    {
+	return( false );
+    }
 
-	void critter_out( CritterCl& critter ) {}
+    void combat_result( array<uint>& data )
+    {
+    }
 
-	void item_map_in( ItemCl& item ) {}
+    void critter_action( bool localCall, CritterCl& critter, int action, int actionExt, Item@ item )
+    {
+    }
 
-	void item_map_changed( ItemCl& newItem, ItemCl& oldItem ) {}
+    void critter_description( string& description, CritterCl& critter, int lookType )
+    {
+    }
 
-	void item_map_out( ItemCl& item ) {}
+    void critter_in( CritterCl& critter )
+    {
+    }
 
-	void item_inv_in( ItemCl& item ) {}
+    void critter_out( CritterCl& critter )
+    {
+    }
 
-	void item_inv_out( ItemCl& item ) {}
+    void filename_logfile( string& filename )
+    {
+    }
 
-	bool map_message( string& message, uint16& hexX, uint16& hexY, uint& color, uint& delay )
-	{
-		return( true );
-	}
+    void filename_screenshot( string& filename )
+    {
+    }
 
-	bool in_message( string& message, int& sayType, uint& critterId, uint& delay )
-	{
-		return( true );
-	}
+    void generic_description( string& description, int descType, int& offsX, int& offsY )
+    {
+    }
 
-	bool out_message( string& message, int& sayType )
-	{
-		return( true );
-	}
+    void get_active_screens( array<int>& screens )
+    {
+    }
+    
+    bool get_cont_item( uint& itemId, bool& isEnemy )
+    {
+	return( false );
+    }
 
-	void combat_result( array<uint>& data ) {}
+    bool get_elevator( uint type, array<uint>& data )
+    {
+	return( false );
+    }
 
-	string@ generic_description( int descType, int& offsetX, int& offsetY )
-	{
-		return( null );
-	}
+    void hit_aim( uint8& aim )
+    {
+    }
 
-	string@ item_description( ItemCl& item, int lookType )
-	{
-		return( null );
-	}
+    bool in_message( string& message, int& sayType, uint& critterId, uint& delay )
+    {
+	return( true );
+    }
 
-	string@ critter_description( CritterCl& cr, int lookType )
-	{
-		return( null );
-	}
+    void item_description( string& description, ItemCl& item, int lookType )
+    {
+    }
 
-	void critter_action( bool localCall, CritterCl& critter, int action, int actionExt, ItemCl@ item ) {}
+    void item_inv_changed( ItemCl& itemNow, ItemCl& itemBefore )
+    {
+    }
 
-#endif // __CLIENT
+    void item_inv_in( ItemCl& item )
+    {
+    }
+
+    void item_inv_out( ItemCl& item )
+    {
+    }
+
+    void item_map_changed( ItemCl& itemNow, ItemCl& itemBefore )
+    {
+    }
+
+    void item_map_in( ItemCl& item )
+    {
+    }
+
+    void item_map_out( ItemCl& item )
+    {
+    }
+
+    void items_collection( int collection, array<ItemCl>& items )
+    {
+    }
+
+    void map_message( string& message, uint16& hexX, uint16& hexY, uint& color, uint& delay )
+    {
+    }
+
+    void message_box( string& message, int type, bool scriptCall )
+    {
+    }
+
+    bool out_message( string& message, int& sayType )
+    {
+	return( true );
+    }
+
+    bool player_data_check( array<int>& data )
+    {
+	return( true );
+    }
+
+    void player_data_generate( array<int>& data )
+    {
+    }
+
+    void screen_change( bool show, int screen, dictionary@ params )
+    {
+    }
+
+    void to_hit( int& toHit, CritterCl& chosen, CritterCl& target, ProtoItem& weapon, uint8 weaponMode )
+    {
+    }
+#endif // !__CLIENT
 
 #ifdef __MAPPER
+    bool console_message( string& message )
+    {
+	return( false );
+    }
 
-	bool console_message( string& message )
-	{
-		return( false );
-	}
+    void map_load( MapperMap& map )
+    {
+    }
 
+    void map_save( MapperMap& map )
+    {
+    }
+
+    void start()
+    {
+    }
 #endif // __MAPPER
 
 #ifdef __SERVER
+    /* TODO
+    bool check_look( Map& map, Critter& critter, Critter& opponent );
+    bool check_trap_look( Map& map, Critter& cr, Item& trap );
+    */
+    void critter_attack( Critter& critter, Critter& target, ProtoItem& weapon, uint8 weaponMode, ProtoItem@ ammo )
+    {
+    }
 
-	void init()
-	{
-		Log( "Initializing plugin: "+this.name );
-	}
+    void critter_attacked( Critter& critter, Critter& attacker )
+    {
+    }
 
-	bool start()
-	{
-		return( true );
-	}
+    void critter_dead( Critter& critter, Critter@ killer )
+    {
+    }
 
-	void finish() {}
+    void critter_finish( Critter& critter, bool toDelete )
+    {
+    }
 
-	// global_process
+    void critter_idle( Critter& critter )
+    {
+    }
 
-	// global_invite
+    void critter_init( Critter& critter, bool firstTime )
+    {
+    }
 
-	void critter_init( Critter& cr, bool firstTime ) {}
+    void critter_move_item( Critter& critter, Item& item, uint8 fromSlot )
+    {
+    }
 
-	void critter_finish( Critter& cr, bool toDelete ) {}
+    void critter_reload_weapon( Critter& critter, Item& weapon, Item@ ammo )
+    {
+    }
 
-	void critter_idle( Critter& cr ) {}
+    void critter_respawn( Critter& critter )
+    {
+    }
 
-	void critter_attack( Critter& cr, Critter& target, ProtoItem& weapon, uint8 weaponMode, ProtoItem@ ammo ) {}
+    bool critter_stealing( Critter& critter, Critter& thief, Item& item, uint count )
+    {
+	return( true );
+    }
 
-	void critter_attacked( Critter& cr, Critter& attacker ) {}
+    bool critter_use_item( Critter& critter, Item& item, Critter@ targetCritter, Item@ targetItem, Scenery@ targetScenery, uint param )
+    {
+	return( false );
+    }
 
-	void critter_reload_weapon( Critter& cr, Item& weapon, Item@ ammo ) {}
+    bool critter_use_skill( Critter& critter, int skill, Critter@ targetCritter, Item@ targetItem, Scenery@ targetScenery )
+    {
+	return( false );
+    }
 
-	void critter_dead( Critter& cr, Critter@ killer ) {}
+    void global_invite( Critter& leader, Item@ car, uint encounterDescriptor, int combatMode, uint& mapId, uint16& hexX, uint16& hexY, uint8& dir )
+    {
+    }
 
-	void critter_respawn( Critter& cr ) {}
+    void global_process( int processType, Critter& critter, Item@ car, float& curX, float& curY, float& toX, float& toY, float& speed, uint& encounterDescriptor, bool& waitForAnswer )
+    {
+    }
 
-	void map_critter_in( Map& map, Critter& cr ) {}
+    bool items_barter( Item@[]& saleItems, uint[]& saleItemsCount, Item@[]& buyItems, uint[]& buyItemsCount, Critter& player, Critter& npc )
+    {
+	return( true );
+    }
 
-	void map_critter_out( Map& map, Critter& cr ) {}
+    void items_crafted( array<Item@>& items, array<uint>& itemsCount, array<Item@>& resources, Critter& critter )
+    {
+    }
 
-	void items_crafted( array<Item@>& items, array<uint>& itemsCount, array<Item@>& resources, Critter& cr ) {}
+    void karma_voting( Critter& critterFrom, Critter& critterTo, bool valUp )
+    {
+    }
 
-	void turn_based_begin( Map& map ) {}
+    void map_critter_in( Map& map, Critter& critter )
+    {
+    }
 
-	void turn_based_end( Map& map ) {}
+    void map_critter_out( Map& map, Critter& critter )
+    {
+    }
 
-	void turn_based_process( Map& map, Critter& cr, bool beginTurn ) {}
+    /* TODO
+    bool npc_plane_begin( Critter& npc, NpcPlane& plane, int reason, Critter@ someCritter, Item@ someItem );
+    bool npc_plane_end( Critter& npc, NpcPlane& plane, int reason, Critter@ someCritter, Item@ someItem );
+    bool npc_plane_run( Critter& npc, NpcPlane& plane, int reason, uint& r0, uint& r1, uint& r2 );
+    */
 
-	void turn_based_sequence( Map& map, array<Critter@>& critters, Critter@ firstTurnCr ) {}
+    bool player_allowcommand( Critter@ critter, string@ adminUser, uint8 command )
+    {
+	return( true );
+    }
 
-	void world_save() {}
+    bool player_getaccess( Critter& critter, int access, string& password )
+    {
+	return( true );
+    }
 
-	bool player_login( uint ip, string& name, uint id, uint& textMsg, uint& strNum )
-	{
-		return( true );
-	}
+    void player_levelup( Critter& critter, uint skillIdx, uint skillUp, uint perkIdx )
+    {
+    }
 
-	void player_levelup( Critter& cr, uint skillIdx, uint skillUp, uint perkIdx ) {}
+    bool player_login( uint ip, string& name, uint id, uint& textMsg, uint& strNum, string& lexems )
+    {
+	return( true );
+    }
 
-	bool player_getaccess( Critter& cr, int access, string& password )
-	{
-		return( true );
-	}
+    bool player_registration( uint ip, string& name, uint& textMsg, uint& strNum, string& lexems )
+    {
+	return( true );
+    }
 
-	bool player_allowcommand( Critter@ cr, string@ adminUser, uint8 command )
-	{
-		return( true );
-	}
+    void turn_based_begin( Map& map )
+    {
+    }
 
-	bool player_registration( uint ip, string& name, uint& textMsg, uint& strNum, string& lexems )
-	{
-		return( true );
-	}
+    void turn_based_end( Map& map )
+    {
+    }
 
+    void turn_based_process( Map& map, Critter& critter, bool beginTurn )
+    {
+    }
+
+    void turn_based_sequence( Map& map, array<Critter@>& critters, Critter@ firstTurnCritter )
+    {
+    }
+
+    void world_save()
+    {
+    }
 #endif // __SERVER
-
 };
 
 shared class PluginPriority
 {
-	private array<array<uint>> priority;
+    private array<array<uint>> priority;
 
-	PluginPriority() {}
+    PluginPriority() {}
 
-	uint get_opIndex( string priorityName ) final
-	{
-		int priorityId = this.GetId( priorityName );
+    uint get_opIndex( string priorityName ) final
+    {
+        int priorityId = this.GetId( priorityName );
 
-		if( priorityId < 0 )
-		{
-			Log( "Invalid priority<"+priorityName+">" );
-			return( 0 );
-		}
+        if( priorityId < 0 )
+        {
+            Log( "Invalid priority<"+priorityName+">" );
+            return( 0 );
+        }
 
-		for( uint p=0, pLen=this.priority.length(); p<pLen; p++ )
-		{
-			array<uint> func = this.priority[p];
-			if( func.length() != 2 )
-				continue;
+        for( uint p=0, pLen=this.priority.length(); p<pLen; p++ )
+        {
+            array<uint> func = this.priority[p];
+            if( func.length() != 2 )
+                continue;
 
-			if( func[0] == uint(priorityId) )
-				return( func[1] );
-		}
+            if( func[0] == uint(priorityId) )
+                return( func[1] );
+        }
 
-		return( 0 );
-	}
+        return( 0 );
+    }
 
-	void set_opIndex( string priorityName, uint value ) final
-	{
-		int priorityId = this.GetId( priorityName );
+    void set_opIndex( string priorityName, uint value ) final
+    {
+        int priorityId = this.GetId( priorityName );
 
-		if( priorityId < 0 )
-		{
-			Log( "Invalid priority<"+priorityName+">" );
-			return;
-		}
+        if( priorityId < 0 )
+        {
+            Log( "Invalid priority<"+priorityName+">" );
+            return;
+        }
 
-		for( uint p=0, pLen=this.priority.length(); p<pLen; p++ )
-		{
-			array<uint> func = this.priority[p];
-			if( func.length() != 2 )
-				continue;
+        for( uint p=0, pLen=this.priority.length(); p<pLen; p++ )
+        {
+            array<uint> func = this.priority[p];
+            if( func.length() != 2 )
+                continue;
 
-			if( func[0] == uint(priorityId) )
-			{
-				func[1] = value;
-				return;
-			}
-		}
+            if( func[0] == uint(priorityId) )
+            {
+                func[1] = value;
+                return;
+            }
+        }
 
-		array<uint> newPriority = { priorityId, value };
-		this.priority.insertLast( newPriority );
-	}
+        array<uint> newPriority = { priorityId, value };
+        this.priority.insertLast( newPriority );
+    }
 
-	/* static */ string@ GetName( uint priorityId ) final
-	{
-		array<string> names = this.GetNames();
+    /* static */ string@ GetName( uint priorityId ) final
+    {
+        array<string> names = this.GetNames();
 
-		if( priorityId >= names.length() )
-			return( null );
+        if( priorityId >= names.length() )
+            return( null );
 
-		return( names[priorityId] );
-	}
+        return( names[priorityId] );
+    }
 
-	/* static */ array<string> GetNames() final
-	{
-		array<string> names;
+    /* static */ array<string> GetNames() final
+    {
+        array<string> names;
 
-		reflection::typeof<Plugin> plugin_t;
+        reflection::typeof<Plugin> plugin_t;
 
-		for( uint m=0, mLen=plugin_t.methodsCount; m<mLen; m++ )
-		{
-			string name = plugin_t.getMethodDeclaration( m, false, false, false );
-			int num = findFirst( name, " " ) + 1;
-			name = substring( name, num, findFirst( name, "(" ) - num );
+        for( uint m=0, mLen=plugin_t.methodsCount; m<mLen; m++ )
+        {
+            // extract only name from full declaration
+            string name = plugin_t.getMethodDeclaration( m, false, false, false );
+            int num = findFirst( name, " " ) + 1;
+            name = substring( name, num, findFirst( name, "(" ) - num );
 
-			if( name.rawGet(0) < 'a' || name.rawGet(0) > 'z' )
-				continue;
-			if( name.startsWith( "get_" ) || name.startsWith( "set_" ))
-				continue;
+            // skip Plugin functions
+            if( name.rawGet(0) < 'a' || name.rawGet(0) > 'z' )
+                continue;
 
-			names.insertLast( name );
-		}
+            // skip getters/setters
+            if( name.startsWith( "get_" ) || name.startsWith( "set_" ))
+                continue;
 
-		return( names );
-	}
+            names.insertLast( name );
+        }
 
-	/* static */ int GetId( string& priorityName ) final
-	{
-		array<string> names = this.GetNames();
+        return( names );
+    }
 
-		return( names.find( priorityName ));
-	}
+    /* static */ int GetId( string& priorityName ) final
+    {
+        array<string> names = this.GetNames();
+
+        return( names.find( priorityName ));
+    }
 };
 
 #ifndef __PLUGIN__
 
-import bool RegisterPlugin( Plugin@ plugin ) from PLUGIN_MODULE;
-import bool RegisterPlugin( Plugin@ plugin, bool enabled ) from PLUGIN_MODULE;
-import void VerifyPlugins() from PLUGIN_MODULE;
-
-import bool IsPlugin( string& name ) from PLUGIN_MODULE;
-import bool IsPluginEnabled( string& name ) from PLUGIN_MODULE;
-import Plugin@ GetPlugin( string& name ) from PLUGIN_MODULE;
-import uint GetPlugins( array<Plugin@>& plugins ) from PLUGIN_MODULE;
-import uint GetPluginsCount() from PLUGIN_MODULE;
-import uint GetEnabledPlugins( array<Plugin@>& plugins ) from PLUGIN_MODULE;
-import uint GetEnabledPlugins( array<Plugin@>& plugins, string& priorityName ) from PLUGIN_MODULE;
-import uint GetEnabledPluginsCount() from PLUGIN_MODULE;
-import uint GetDisabledPlugins( array<Plugin@>& plugins ) from PLUGIN_MODULE;
-import uint GetDisabledPluginsCount() from PLUGIN_MODULE;
-import array<uint> GetPluginsNames( array<string>& enabled, array<string>& disabled ) from PLUGIN_MODULE;
-import uint GetPluginsOrder( array<array<string>>& strings ) from PLUGIN_MODULE;
-
-import void SetPlugin( string& name, bool enabled ) from PLUGIN_MODULE;
-
-//
-
-import void RunPluginEvent( Plugin& sender, string& event, dictionary@ params ) from PLUGIN_MODULE;
-
-//
-
-import void Plugins_Loop() from PLUGIN_MODULE;
-
-#ifndef __SERVER
-
-import void Plugins_RenderIface( uint layer ) from PLUGIN_MODULE;
-import void Plugins_RenderMap() from PLUGIN_MODULE;
-import bool Plugins_KeyDown( uint8 key, string& keyText ) from PLUGIN_MODULE;
-import bool Plugins_KeyUp( uint8 key, string& keyText ) from PLUGIN_MODULE;
-import bool Plugins_MouseDown( int click ) from PLUGIN_MODULE;
-import bool Plugins_MouseUp( int click ) from PLUGIN_MODULE;
-import void Plugins_MouseMove( int x, int y ) from PLUGIN_MODULE;
-import void Plugins_InputLost() from PLUGIN_MODULE;
-
-#endif // !__SERVER
-
-#ifdef __CLIENT
-
-import void Plugins_GetActiveScreens( array<int>& result ) from PLUGIN_MODULE;
-import bool Plugins_ScreenChange( bool show, int screen, int p0, int p1, int p2 ) from PLUGIN_MODULE;
-import void Plugins_CritterIn( CritterCl& critter ) from PLUGIN_MODULE;
-import void Plugins_CritterOut( CritterCl& critter ) from PLUGIN_MODULE;
-import void Plugins_ItemMapIn( ItemCl& item ) from PLUGIN_MODULE;
-import void Plugins_ItemMapChanged( ItemCl& newItem, ItemCl& oldItem ) from PLUGIN_MODULE;
-import void Plugins_ItemMapOut( ItemCl& item ) from PLUGIN_MODULE;
-import void Plugins_ItemInvIn( ItemCl& item ) from PLUGIN_MODULE;
-import void Plugins_ItemInvOut( ItemCl& item ) from PLUGIN_MODULE;
-import bool Plugins_MapMessage( string& message, uint16& hexX, uint16& hexY, uint& color, uint& delay ) from PLUGIN_MODULE;
-import bool Plugins_InMessage( string& message, int& sayType, uint& critterId, uint& delay ) from PLUGIN_MODULE;
-import bool Plugins_OutMessage( string& message, int& sayType ) from PLUGIN_MODULE;
-import void Plugins_CombatResult( array<uint>& data ) from PLUGIN_MODULE;
-import string@ Plugins_GenericDescription( int descType, int& offsetX, int& offsetY ) from PLUGIN_MODULE;
-import string@ Plugins_ItemDescription( ItemCl& item, int lookType ) from PLUGIN_MODULE;
-import string@ Plugins_CritterDescription( CritterCl& cr, int lookType ) from PLUGIN_MODULE;
-import void Plugins_CritterAction( bool localCall, CritterCl& critter, int action, int actionExt, ItemCl@ item ) from PLUGIN_MODULE;
-
-#endif // __CLIENT
-
-#ifdef __MAPPER
-
-import bool Plugins_ConsoleMessage( string& message ) from PLUGIN_MODULE;
-
-#endif // __MAPPER
-
-#ifdef __SERVER
-
-import void Plugins_Init() from PLUGIN_MODULE;
-import bool Plugins_Start() from PLUGIN_MODULE;
-import void Plugins_Finish() from PLUGIN_MODULE;
-import void Plugins_CritterInit( Critter& cr, bool firstTime ) from PLUGIN_MODULE;
-import void Plugins_CritterFinish( Critter& cr, bool toDelete ) from PLUGIN_MODULE;
-import void Plugins_CritterIdle( Critter& cr ) from PLUGIN_MODULE;
-import void Plugins_CritterAttack( Critter& cr, Critter& target, ProtoItem& weapon, uint8 weaponMode, ProtoItem@ ammo ) from PLUGIN_MODULE;
-import void Plugins_CritterAttacked( Critter& cr, Critter& attacker ) from PLUGIN_MODULE;
-import void Plugins_CritterReloadWeapon( Critter& cr, Item& weapon, Item@ ammo ) from PLUGIN_MODULE;
-import void Plugins_CritterDead( Critter& cr, Critter@ killer ) from PLUGIN_MODULE;
-import void Plugins_CritterRespawn( Critter& cr ) from PLUGIN_MODULE;
-import void Plugins_MapCritterIn( Map& map, Critter& cr ) from PLUGIN_MODULE;
-import void Plugins_MapCritterOut( Map& map, Critter& cr ) from PLUGIN_MODULE;
-import void Plugins_ItemsCrafted( array<Item@>& items, array<uint>& itemsCount, array<Item@>& resources, Critter& cr ) from PLUGIN_MODULE;
-import void Plugins_TurnBasedBegin( Map& map ) from PLUGIN_MODULE;
-import void Plugins_TurnBasedEnd( Map& map ) from PLUGIN_MODULE;
-import void Plugins_TurnBasedProcess( Map& map, Critter& cr, bool beginTurn ) from PLUGIN_MODULE;
-import void Plugins_TurnBasedSequence( Map& map, array<Critter@>& critters, Critter@ firstTurnCr ) from PLUGIN_MODULE;
-import void Plugins_WorldSave() from PLUGIN_MODULE;
-import bool Plugins_PlayerRegistration( uint ip, string& name, uint& textMsg, uint& strNum, string& lexems ) from PLUGIN_MODULE;
-import bool Plugins_PlayerLogin( uint ip, string& name, uint id, uint& textMsg, uint& strNum ) from PLUGIN_MODULE;
-import void Plugins_PlayerLevelup( Critter& cr, uint skillIdx, uint skillUp, uint perkIdx ) from PLUGIN_MODULE;
-import bool Plugins_PlayerGetaccess( Critter& cr, int access, string& password ) from PLUGIN_MODULE;
-import bool Plugins_PlayerAllowcommand( Critter@ cr, string@ adminUser, uint8 command ) from PLUGIN_MODULE;
+import IPluginManager@ get_Plugins() from PLUGIN_MODULE;
 
 #endif // __SERVER
 
